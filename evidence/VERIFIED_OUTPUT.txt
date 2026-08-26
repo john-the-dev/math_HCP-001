@@ -1,0 +1,36 @@
+Interpreter: Python 3.12.4
+Command: python3 verify_z43_boundary.py
+Wall time (/usr/bin/time -p): 9.27 seconds
+Verifier SHA-256: 753078c8a9babb582c6c0cde3b7e431e2023c6bf75d21394bab8e1f67cbc7503
+
+python=3.12.4
+candidate_edges=454
+degree_counts=20:14,21:10,22:19
+candidate_K5=0 candidate_I5=2 F=2
+candidate_I5_sets=[(3, 6, 7, 11, 12), (6, 7, 11, 12, 15)]
+Z0_clauses=129 positive_clauses=43 SAT=False exact_min_F=2
+Z1_classes=20 direct_unaffected_witnesses=20
+Z1 k= 2 toggle=delete witness=I5 (0, 2, 5, 8, 11)
+Z1 k= 3 toggle=add    witness=K5 (0, 3, 10, 23, 30)
+Z1 k= 4 toggle=add    witness=K5 (0, 2, 4, 14, 16)
+Z1 k= 5 toggle=add    witness=K5 (0, 5, 7, 21, 23)
+Z1 k= 6 toggle=add    witness=K5 (0, 6, 13, 20, 27)
+Z1 k= 7 toggle=delete witness=I5 (0, 3, 7, 11, 35)
+Z1 k= 8 toggle=add    witness=K5 (0, 8, 10, 20, 22)
+Z1 k= 9 toggle=add    witness=K5 (0, 2, 9, 16, 23)
+Z1 k=10 toggle=delete witness=I5 (0, 4, 10, 15, 19)
+Z1 k=11 toggle=add    witness=K5 (0, 11, 13, 23, 25)
+Z1 k=12 toggle=delete witness=I5 (0, 3, 6, 9, 12)
+Z1 k=13 toggle=delete witness=I5 (0, 4, 8, 13, 19)
+Z1 k=14 toggle=delete witness=I5 (0, 3, 6, 9, 14)
+Z1 k=15 toggle=add    witness=K5 (0, 2, 15, 22, 29)
+Z1 k=16 toggle=delete witness=I5 (0, 5, 8, 11, 16)
+Z1 k=17 toggle=add    witness=K5 (0, 7, 17, 27, 29)
+Z1 k=18 toggle=delete witness=I5 (0, 3, 9, 18, 35)
+Z1 k=19 toggle=add    witness=K5 (0, 19, 21, 31, 33)
+Z1 k=20 toggle=delete witness=I5 (0, 3, 9, 20, 35)
+Z1 k=21 toggle=delete witness=I5 (0, 4, 15, 21, 32)
+radius_le_2_distinct_states=408157 min_F=2 minimizer_count=5
+radius1_neutral=[(6, 7), (11, 12)]
+radius2_nontrivial_neutral=[((6, 7), (28, 29)), ((11, 12), (32, 33))]
+runtime_seconds=9.257247

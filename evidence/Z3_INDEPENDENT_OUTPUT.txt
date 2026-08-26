@@ -1,0 +1,15 @@
+Interpreter: Python 3.12.4
+Command: python3 verify_z3_direct_independent.py
+Wall time (/usr/bin/time -p): 2.59 seconds
+Verifier SHA-256: 612f3d4e73ef423a9e40294a9535128b6fbeac288666f32d753cd711b10a015f
+
+python=3.12.4
+noncycle_chords=860 unordered_distinct_triples=105639820
+cycle_free_5sets=567987
+universal_corrector_count_histogram={0: 602, 2: 258}
+valid_other_toggle_pair_count_histogram={0: 258, 4: 172, 8: 86, 20: 43, 81: 43, 1715: 172, 1748: 86}
+valid_other_toggle_pair_incidences=451027
+distinct_candidate_triples=450769
+mutually_corrective_triples=0
+Z3_direct_result=UNSAT_all_105639820_distinct_labeled_triples
+runtime_seconds=2.522441

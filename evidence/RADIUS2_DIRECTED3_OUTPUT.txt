@@ -1,0 +1,104 @@
+{
+  "candidate": {
+    "edges": 454,
+    "K5": 0,
+    "I5": 2,
+    "F": 2,
+    "witnesses": [
+      [
+        3,
+        6,
+        7,
+        11,
+        12
+      ],
+      [
+        6,
+        7,
+        11,
+        12,
+        15
+      ]
+    ]
+  },
+  "radius0": {
+    "graphs": 1,
+    "minimumF": 2
+  },
+  "radius1": {
+    "graphs": 903,
+    "minimumF": 2,
+    "minimizers": 2
+  },
+  "radius2": {
+    "graphs": 407253,
+    "minimumF": 2,
+    "minimizers": 2,
+    "firstMinimizingPairs": [
+      [
+        [
+          6,
+          7
+        ],
+        [
+          28,
+          29
+        ]
+      ],
+      [
+        [
+          11,
+          12
+        ],
+        [
+          32,
+          33
+        ]
+      ]
+    ]
+  },
+  "wholeBall": {
+    "graphs": 408157,
+    "minimumF": 2
+  },
+  "directedThreeFlipRepair": {
+    "definition": "add edge in original I5; delete edge in resulting K5; flip edge in remaining violation",
+    "firstChoices": 14,
+    "trajectories": 53169,
+    "distinctTerminalGraphs": 42535,
+    "minimumF": 2,
+    "firstMinimizingTrajectories": [
+      [
+        [
+          6,
+          7
+        ],
+        [
+          28,
+          29
+        ],
+        [
+          23,
+          24
+        ]
+      ],
+      [
+        [
+          11,
+          12
+        ],
+        [
+          32,
+          33
+        ],
+        [
+          37,
+          38
+        ]
+      ]
+    ]
+  }
+}
+real 11.56
+user 11.52
+sys 0.14

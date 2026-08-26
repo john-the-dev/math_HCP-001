@@ -1,0 +1,23 @@
+python=3.12.4
+noncycle_chords=860 unordered_pairs=369370
+cycle_free_5sets=567987
+base_induced_edge_histogram={1: 5418, 2: 22231, 3: 62694, 4: 115971, 5: 144050, 6: 124313, 7: 66435, 8: 22188, 9: 4687}
+single_toggle_direct_witness_counts={2: 43, 3: 86, 6: 43, 7: 86, 8: 86, 9: 43, 10: 43, 11: 43, 12: 129, 15: 43, 18: 129, 26: 43, 30: 43}
+common_corrective_partner_count_histogram={0: 602, 2: 258}
+pair_witnesses_from_first=369112 from_second=258
+mutual_corrective_pairs=0
+Z2_direct_result=UNSAT_all_369370_labeled_pairs
+example toggles=(0, 2),(0, 3) witness=I5 (0, 2, 5, 8, 11)
+example toggles=(0, 2),(0, 4) witness=I5 (0, 2, 5, 8, 11)
+example toggles=(0, 2),(0, 5) witness=I5 (0, 2, 6, 11, 17)
+example toggles=(0, 2),(0, 6) witness=I5 (0, 2, 5, 8, 11)
+example toggles=(0, 2),(0, 7) witness=I5 (0, 2, 5, 8, 11)
+example toggles=(0, 2),(0, 8) witness=I5 (0, 2, 5, 11, 37)
+example toggles=(0, 2),(0, 9) witness=I5 (0, 2, 5, 8, 11)
+example toggles=(0, 2),(0, 10) witness=I5 (0, 2, 5, 8, 11)
+example toggles=(0, 2),(0, 11) witness=I5 (0, 2, 5, 8, 40)
+example toggles=(0, 2),(0, 12) witness=I5 (0, 2, 5, 8, 11)
+runtime_seconds=3.548805
+real 3.57
+user 3.52
+sys 0.05

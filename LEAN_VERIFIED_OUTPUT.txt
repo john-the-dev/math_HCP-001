@@ -1,0 +1,23 @@
+Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)
+Lake version 5.0.0-src+819816b (Lean version 4.33.1)
+
+lake build:
+Build completed successfully (8 jobs).
+
+lake env leanchecker Hcp001.Basic:
+Exited 0 with no diagnostics.
+
+Printed theorem dependencies:
+candidate_edge_count: candidate_edge_count._native.native_decide.ax_1_1
+candidate_degree_distribution: candidate_degree_distribution._native.native_decide.ax_1_1
+candidate_has_no_k5: propext, candidate_has_no_k5._native.native_decide.ax_1_1
+candidate_has_exact_i5: propext, candidate_has_exact_i5._native.native_decide.ax_1_1
+
+lake exe hcp001_verify:
+candidate_edges=454
+degree_counts=20:14,21:10,22:19
+candidate_K5=0 candidate_I5=2 F=2
+candidate_I5_sets=[[3, 6, 7, 11, 12], [6, 7, 11, 12, 15]]
+
+All Python and Node evidence verifiers exited 0.
+evidence/MANIFEST.sha256: every listed file OK.

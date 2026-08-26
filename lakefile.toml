@@ -1,0 +1,10 @@
+name = "math_hcp_001"
+version = "0.1.0"
+defaultTargets = ["hcp001_verify"]
+
+[[lean_lib]]
+name = "Hcp001"
+
+[[lean_exe]]
+name = "hcp001_verify"
+root = "Main"

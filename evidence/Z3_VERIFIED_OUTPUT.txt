@@ -1,0 +1,12 @@
+python=3.12.4
+noncycle_chords=860 unordered_triples=105639820
+cycle_free_5sets=567987
+two_toggle_hitting_pair_count_histogram={0: 258, 4: 172, 8: 86, 20: 43, 81: 43, 1715: 172, 1748: 86}
+total_two_toggle_hitting_pairs_across_first_toggles=451027
+candidate_triples_needing_mutual_check=450769
+mutually_corrective_triples=0
+Z3_direct_result=UNSAT_all_105639820_labeled_triples
+runtime_seconds=3.227835
+real 3.35
+user 3.29
+sys 0.06
