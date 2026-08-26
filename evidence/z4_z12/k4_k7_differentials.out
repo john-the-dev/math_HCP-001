@@ -1,0 +1,35 @@
+=== k=6 bounds=off
+unique_states=1223847
+survivors=0
+under_target_hits=0
+runtime_seconds=15.12
+=== k=6 bounds=on
+unique_states=4009
+survivors=0
+under_target_hits=0
+runtime_seconds=0.32
+=== k=7 bounds=off
+unique_states=10469739
+survivors=0
+under_target_hits=0
+runtime_seconds=191.36
+=== k=7 bounds=on
+unique_states=11607
+survivors=0
+under_target_hits=0
+runtime_seconds=1.34
+=== k=8 bounds=on
+unique_states=35530
+survivors=0
+under_target_hits=0
+runtime_seconds=4.53
+=== k=9 bounds=on
+unique_states=104399
+survivors=0
+under_target_hits=0
+runtime_seconds=15.87
+=== k=10 bounds=on
+unique_states=309500
+survivors=0
+under_target_hits=0
+runtime_seconds=49.32

@@ -1,0 +1,7 @@
+records=423937
+records_by_R_size_1to4=[10105, 44419, 129129, 240284]
+max_R=4
+min_F=6
+empty_F_possible=False
+non_cycle_chords=860
+cycle_free_5sets=567987
