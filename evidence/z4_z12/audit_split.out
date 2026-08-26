@@ -1,0 +1,9 @@
+trials=4000
+coverage_only_fired=50
+disjoint_only_fired=312
+both_fired=1012
+union_firing_rate=0.344
+coverage_unsound=0
+disjoint_unsound=0
+union_unsound=0
+SPLIT_AUDIT_PASSED=True
