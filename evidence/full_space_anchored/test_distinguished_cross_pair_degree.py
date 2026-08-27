@@ -165,6 +165,11 @@ class DistinguishedCrossPairDegreeTests(unittest.TestCase):
             self.assertEqual(len(bounded) - len(unbounded), clause_delta)
             self.assertEqual(bounded_top - unbounded_top, variable_delta)
         self.assertEqual(
+            SAT.core_clauses(18, a_internal_degree=0),
+            SAT.core_clauses(
+                18, a_internal_degree=0,
+                enforce_distinguished_cross_pair_degree_bounds=False))
+        self.assertEqual(
             SAT.core_clauses(20),
             SAT.core_clauses(
                 20, enforce_distinguished_cross_pair_degree_bounds=False))

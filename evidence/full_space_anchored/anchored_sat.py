@@ -846,12 +846,18 @@ def solve(args):
     residual_block_degree_active = (
         not args.no_residual_block_degree_bounds
         and distinguished_refinements_applicable)
+    cross_pair_a_applicable = (
+        args.a_internal_degree is not None
+        and args.a_internal_degree > 0)
+    cross_pair_b_applicable = (
+        args.b_internal_degree is not None
+        and args.degree + args.b_internal_degree + 1 < N)
     cross_pair_a_active = (
         not args.no_distinguished_cross_pair_degree_bounds
-        and args.a_internal_degree is not None)
+        and cross_pair_a_applicable)
     cross_pair_b_active = (
         not args.no_distinguished_cross_pair_degree_bounds
-        and args.b_internal_degree is not None)
+        and cross_pair_b_applicable)
     clauses, top = core_clauses(
         degree=args.degree,
         edge_count=args.edges,
@@ -904,8 +910,8 @@ def solve(args):
     print("distinguished_cross_pair_degree_bounds="
           + configured_side_bound_state(
               args.no_distinguished_cross_pair_degree_bounds,
-              args.a_internal_degree is not None,
-              args.b_internal_degree is not None))
+              cross_pair_a_applicable,
+              cross_pair_b_applicable))
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,

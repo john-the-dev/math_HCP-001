@@ -393,7 +393,8 @@ three nonneighbors and at most five neighbors inside `T`.
 
 The encoding excludes `w` itself, guards every counter by membership of `w`,
 and includes the remaining pair literal in every projected conjunction. The
-A and B sides activate independently when `j` and `k` are supplied;
+A and B sides activate independently when their fixed-pair families are
+nonempty (`j > 0` for A and at least one fixed B-nonneighbor for B);
 `--no-distinguished-cross-pair-degree-bounds` disables both for diagnostics.
 They add no partition axis, and all five manifest covers remain unchanged.
 The derivation depends on the global K5/I5 and A-K4/B-I4 clauses, so a

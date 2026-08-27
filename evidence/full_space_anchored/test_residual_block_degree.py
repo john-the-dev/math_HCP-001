@@ -161,8 +161,10 @@ class ResidualBlockDegreeTests(unittest.TestCase):
 
         cases = (
             (None, None, False, False, "not-applicable", False, False),
+            (0, None, False, False, "not-applicable", False, False),
             (2, None, False, False, "not-applicable", False, False),
             (None, 8, False, False, "not-applicable", False, False),
+            (0, 8, False, False, "enabled", True, True),
             (2, 8, False, False, "enabled", True, True),
             (2, 8, True, False, "disabled", False, True),
             (2, 8, False, True, "disabled", True, False),
@@ -234,10 +236,12 @@ class ResidualBlockDegreeTests(unittest.TestCase):
         cross_pair_state = "disabled" if cross_pair_off else "enabled"
         self.assertIn(f"cross_block_pair_common_bounds={cross_pair_state}",
                       output.getvalue())
-        a_pair_active = not cross_pair_degree_off and j is not None
-        b_pair_active = not cross_pair_degree_off and k is not None
+        a_pair_applicable = j is not None and j > 0
+        b_pair_applicable = k is not None and 20 + k + 1 < SAT.N
+        a_pair_active = not cross_pair_degree_off and a_pair_applicable
+        b_pair_active = not cross_pair_degree_off and b_pair_applicable
         pair_state = SAT.configured_side_bound_state(
-            cross_pair_degree_off, j is not None, k is not None)
+            cross_pair_degree_off, a_pair_applicable, b_pair_applicable)
         self.assertIn(
             f"distinguished_cross_pair_degree_bounds={pair_state}",
             output.getvalue())
