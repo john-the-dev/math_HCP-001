@@ -109,6 +109,11 @@ the global 5-set clauses produced these measurements (Python 3.12,
 These are formula-construction measurements, not solver benchmarks or UNSAT
 claims.
 
+`discovery_runs.jsonl` records bounded discovery attempts that ended without a
+solver verdict. `INTERRUPTED_NO_VERDICT` means exactly that: it is throughput
+evidence only and is never accepted by the completion-ledger verifier as an
+UNSAT claim.
+
 Every j-only manifest row records the recomputed `edge_min` and `edge_max`
 even though `edges` is null. The manifest describes work to run; it does not
 claim that any partition is UNSAT or that proof artifacts currently exist.
