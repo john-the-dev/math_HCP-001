@@ -244,7 +244,7 @@ def write_manifest(path, mode):
         for edge_count, j in axes:
             edge_part = f"-e{edge_count}" if edge_count is not None else ""
             key = f"d{degree}{edge_part}-j{j}"
-            partitions.append({
+            row = {
                 "id": key,
                 "degree": degree,
                 "edges": edge_count,
@@ -252,7 +252,10 @@ def write_manifest(path, mode):
                 "cnf": f"{key}.cnf",
                 "proof": f"{key}.drat",
                 "result": f"{key}.json",
-            })
+            }
+            if mode == "j-only":
+                row.update(edge_min=minimum, edge_max=maximum)
+            partitions.append(row)
     manifest = {
         "schema": 1,
         "vertex_count": 43,

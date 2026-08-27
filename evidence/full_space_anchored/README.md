@@ -75,6 +75,35 @@ python3 anchored_sat.py --write-manifest j_partition_manifest.json \
   --manifest-mode j-only
 python3 anchored_sat.py --degree 20 --a-internal-degree 2 \
   --solver cadical195 --json d20-j2.json
+python3 verify_manifest.py j_partition_manifest.json
+```
+
+Every j-only manifest row records the recomputed `edge_min` and `edge_max`
+even though `edges` is null. The manifest describes work to run; it does not
+claim that any partition is UNSAT or that proof artifacts currently exist.
+
+Certified results belong in a separate completion ledger. Each UNSAT claim
+must name relative CNF, proof, and checker-output paths and give the SHA-256
+of each artifact. The verifier hashes all three files and requires the checker
+output to contain an exact `s VERIFIED` line. Use `--require-complete` only
+when all 39 cases have independently checked proof artifacts:
+
+```sh
+python3 verify_manifest.py j_partition_manifest.json \
+  --ledger completion_ledger.json
+python3 verify_manifest.py j_partition_manifest.json \
+  --ledger completion_ledger.json --require-complete
+```
+
+Ledger shape:
+
+```json
+{"schema": 1, "claims": [{"id": "d18-j0", "status": "UNSAT",
+  "artifacts": {
+    "cnf": {"path": "d18-j0.cnf", "sha256": "<64 lowercase hex>"},
+    "proof": {"path": "d18-j0.drat", "sha256": "<64 lowercase hex>"},
+    "checker": {"path": "d18-j0.check.txt", "sha256": "<64 lowercase hex>"}
+  }}]}
 ```
 
 For smaller proof jobs, `(d,edge_count,j)` further divides the same space into
