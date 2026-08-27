@@ -60,7 +60,7 @@ class ExactLocalRepairTest(unittest.TestCase):
             [path.name for path in sorted(
                 logs.glob("*.log"),
                 key=lambda path: int(path.name[1:].split(".", 1)[0]))],
-            [f"r{radius}.drat-trim.log" for radius in range(1, 11)],
+            [f"r{radius}.drat-trim.log" for radius in range(1, 12)],
         )
         for path in logs.glob("*.log"):
             self.assertIn("\ns VERIFIED\n", path.read_text())
@@ -91,6 +91,40 @@ class ExactLocalRepairTest(unittest.TestCase):
             self.assertEqual(completed.returncode, 1)
             self.assertIn("did not prove UNSAT (exit 0)", completed.stderr)
             self.assertFalse(checker_marker.exists())
+
+    def test_runner_forwards_valid_timeout_and_rejects_bad_value(self):
+        runner = HERE / "run_exact_local_repair.sh"
+        with tempfile.TemporaryDirectory() as raw_temp:
+            temp = Path(raw_temp)
+            solver_arguments = temp / "solver-args"
+            fake_python = temp / "python3"
+            fake_solver = temp / "cadical"
+            fake_checker = temp / "drat-trim"
+            fake_python.write_text("#!/bin/sh\nexit 0\n")
+            fake_solver.write_text(
+                f"#!/bin/sh\nprintf '%s\\n' \"$@\" > '{solver_arguments}'\n"
+                "exit 0\n")
+            fake_checker.write_text("#!/bin/sh\nexit 99\n")
+            for executable in (fake_python, fake_solver, fake_checker):
+                executable.chmod(0o755)
+            environment = os.environ.copy()
+            environment["PATH"] = f"{temp}:{environment['PATH']}"
+            completed = subprocess.run(
+                [runner, "11", temp / "output", fake_solver, fake_checker,
+                 "binary", "3600"],
+                text=True, capture_output=True, env=environment)
+            self.assertEqual(completed.returncode, 1)
+            arguments = solver_arguments.read_text().splitlines()
+            self.assertIn("-t", arguments)
+            self.assertEqual(arguments[arguments.index("-t") + 1], "3600")
+
+            completed = subprocess.run(
+                [runner, "11", temp / "bad", fake_solver, fake_checker,
+                 "binary", "0"],
+                text=True, capture_output=True, env=environment)
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("timeout must be a positive integer",
+                          completed.stderr)
 
 
 if __name__ == "__main__":
