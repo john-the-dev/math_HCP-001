@@ -83,6 +83,41 @@ def block_internal_degree_clauses(degree, pool):
     return clauses
 
 
+def _conditional_conjunction_atmost(conjunctions, bound, condition, pool):
+    indicators = []
+    clauses = []
+    for conjunction in conjunctions:
+        indicator = pool.id()
+        indicators.append(indicator)
+        clauses.append(
+            [indicator] + [-literal for literal in conjunction] + [-condition])
+    encoded = CardEnc.atmost(
+        indicators, bound=bound, vpool=pool,
+        encoding=EncType.seqcounter).clauses
+    clauses.extend([[-condition] + clause for clause in encoded])
+    return clauses
+
+
+def block_pair_common_clauses(degree, pool):
+    """Encode Ramsey bounds on pairwise common sets inside A and B."""
+    clauses = []
+    for block_name, vertices in (("A", range(degree)),
+                                 ("B", range(degree, N))):
+        vertices = list(vertices)
+        for u, v in combinations(vertices, 2):
+            edge = edge_var(u, v)
+            others = [w for w in vertices if w not in (u, v)]
+            neighbor_bound = 4 if block_name == "A" else 8
+            nonneighbor_bound = 8 if block_name == "A" else 4
+            clauses.extend(_conditional_conjunction_atmost(
+                ((edge_var(u, w), edge_var(v, w)) for w in others),
+                neighbor_bound, edge, pool))
+            clauses.extend(_conditional_conjunction_atmost(
+                ((-edge_var(u, w), -edge_var(v, w)) for w in others),
+                nonneighbor_bound, -edge, pool))
+    return clauses
+
+
 def block_edge_clauses(degree, pool, a_edge_count=None):
     clauses = []
     for index, (edges, (minimum, maximum)) in enumerate(zip(
@@ -112,7 +147,8 @@ def degree_leq_clauses(u, w, pool):
 
 def core_clauses(degree, edge_count=None, a_internal_degree=None,
                  enforce_block_edge_bounds=True, a_edge_count=None,
-                 enforce_block_degree_bounds=True):
+                 enforce_block_degree_bounds=True,
+                 enforce_block_pair_common_bounds=True):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
@@ -146,6 +182,9 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
 
     if enforce_block_degree_bounds:
         clauses.extend(block_internal_degree_clauses(degree, pool))
+
+    if enforce_block_pair_common_bounds:
+        clauses.extend(block_pair_common_clauses(degree, pool))
 
     for u in range(N):
         incident = [edge_var(u, v) for v in range(N) if v != u]
@@ -231,9 +270,35 @@ def verify_block_internal_degree_bounds(adjacency, degree):
     return result
 
 
+def verify_block_pair_common_bounds(adjacency, degree):
+    maxima = {"a_common_neighbors": 0, "a_common_nonneighbors": 0,
+              "b_common_neighbors": 0, "b_common_nonneighbors": 0}
+    for name, vertices in (("A", range(degree)), ("B", range(degree, N))):
+        vertices = list(vertices)
+        for u, v in combinations(vertices, 2):
+            adjacent = bool((adjacency[u] >> v) & 1)
+            if adjacent:
+                count = sum(bool((adjacency[u] >> w) & 1)
+                            and bool((adjacency[v] >> w) & 1)
+                            for w in vertices if w not in (u, v))
+                bound = 4 if name == "A" else 8
+                key = f"{name.lower()}_common_neighbors"
+            else:
+                count = sum(not ((adjacency[u] >> w) & 1)
+                            and not ((adjacency[v] >> w) & 1)
+                            for w in vertices if w not in (u, v))
+                bound = 8 if name == "A" else 4
+                key = f"{name.lower()}_common_nonneighbors"
+            require(count <= bound,
+                    f"{name}-block pair common-set bound violated")
+            maxima[key] = max(maxima[key], count)
+    return maxima
+
+
 def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
                  enforce_block_edge_bounds=True, a_edge_count=None,
-                 enforce_block_degree_bounds=True):
+                 enforce_block_degree_bounds=True,
+                 enforce_block_pair_common_bounds=True):
     require(len(adjacency) == N, "model must contain 42 adjacency rows")
     for u in range(N):
         require(not (adjacency[u] >> u) & 1, "self edge")
@@ -255,6 +320,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
                 "A edge partition violated")
     block_degrees = (verify_block_internal_degree_bounds(adjacency, degree)
                      if enforce_block_degree_bounds else None)
+    pair_common = (verify_block_pair_common_bounds(adjacency, degree)
+                   if enforce_block_pair_common_bounds else None)
 
     degrees = [row.bit_count() for row in adjacency]
     for u, value in enumerate(degrees):
@@ -295,6 +362,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
         result["a_edges"] = actual_a_edges
     if block_degrees is not None:
         result.update(block_degrees)
+    if pair_common is not None:
+        result.update(pair_common)
     return result
 
 
@@ -313,7 +382,8 @@ def solve(args):
     clauses, top = core_clauses(
         args.degree, args.edges, args.a_internal_degree,
         not args.no_block_edge_bounds, args.a_edges,
-        not args.no_block_degree_bounds)
+        not args.no_block_degree_bounds,
+        not args.no_block_pair_common_bounds)
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -325,6 +395,8 @@ def solve(args):
           f"a_edge_partition={args.a_edges}")
     print(f"block_edge_bounds={'disabled' if args.no_block_edge_bounds else 'enabled'}")
     print(f"block_degree_bounds={'disabled' if args.no_block_degree_bounds else 'enabled'}")
+    print("block_pair_common_bounds="
+          f"{'disabled' if args.no_block_pair_common_bounds else 'enabled'}")
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,
@@ -344,6 +416,7 @@ def solve(args):
             "a_edge_partition": args.a_edges,
             "block_edge_bounds": not args.no_block_edge_bounds,
             "block_degree_bounds": not args.no_block_degree_bounds,
+            "block_pair_common_bounds": not args.no_block_pair_common_bounds,
             "solver": args.solver,
             "result": result,
             "vars": top,
@@ -356,7 +429,8 @@ def solve(args):
             record["verification"] = verify_model(
                 adjacency, args.degree, args.edges, args.a_internal_degree,
                 not args.no_block_edge_bounds, args.a_edges,
-                not args.no_block_degree_bounds)
+                not args.no_block_degree_bounds,
+                not args.no_block_pair_common_bounds)
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
@@ -440,6 +514,9 @@ def main():
     parser.add_argument(
         "--no-block-degree-bounds", action="store_true",
         help="disable sound per-vertex block-degree bounds for diagnostics")
+    parser.add_argument(
+        "--no-block-pair-common-bounds", action="store_true",
+        help="disable sound within-block pair common-set bounds for diagnostics")
     parser.add_argument("--solver", default="cadical195")
     parser.add_argument("--cnf")
     parser.add_argument("--proof")

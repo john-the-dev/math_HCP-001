@@ -14,6 +14,7 @@ For each `d`, the CNF searches all 861 edges of `H` and enforces:
 - no K4 in `A` and no independent 4-set in `B`;
 - the exact known edge ranges for the induced `R(4,5,n)` blocks;
 - Ramsey-derived internal-degree bounds for every vertex of each block;
+- Ramsey-derived common-set bounds for every pair inside each block;
 - `deg_H(a) in [d-1,23]` and `deg_H(b) in [d,24]`;
 - at most `451-d` edges;
 - nondecreasing full `H`-degrees independently inside `A` and `B`.
@@ -53,6 +54,26 @@ and its nonneighbors in `B` avoid K5/I3, giving
 for diagnostic comparisons. It must not be used for the production proof ledger.
 `--no-block-degree-bounds` likewise disables only the per-vertex block-degree
 constraints for diagnostics; production formulas keep both families enabled.
+
+The induced block conditions also sharpen the generic pairwise Ramsey cuts.
+For an adjacent pair in `A`, its common neighbors in `A` form an independent
+set (otherwise there is a K4 in `A`), so there are at most four. For a
+nonadjacent pair in `A`, its common nonneighbors contain neither an I3 nor a
+K4, so `R(4,3)=9` bounds the set by eight. Dually, an adjacent pair in `B`
+has at most eight common neighbors by `R(3,4)=9`, and a nonadjacent pair in
+`B` has at most four common nonneighbors. The exact default-on implications
+are:
+
+| block | pair | bounded set | maximum |
+| --- | --- | --- | ---: |
+| `A` | edge | common neighbors in `A` | 4 |
+| `A` | nonedge | common nonneighbors in `A` | 8 |
+| `B` | edge | common neighbors in `B` | 8 |
+| `B` | nonedge | common nonneighbors in `B` | 4 |
+
+Each implication uses projected conjunction indicators and a guarded
+sequential counter. `--no-block-pair-common-bounds` disables only these
+redundant propagation cuts for diagnostics; it is not a production setting.
 
 Python 3.10+ and `python-sat` are required. The development environment used
 `python-sat 1.9.dev15`.
@@ -138,6 +159,21 @@ follows. Times are medians of five construction runs:
 
 These measurements exclude global 5-set clauses and solving and make no SAT
 or UNSAT claim. Build-time differences at this scale are timing noise.
+
+On the same environment, the within-block pair common-set cuts changed the
+already block-edge- and block-degree-bounded d20 cores as follows. Times are
+medians of five construction runs:
+
+| case | pair common-set cuts | core clauses | encoded variables | build seconds |
+| --- | --- | ---: | ---: | ---: |
+| d20-j2 | off | 732,146 | 361,489 | 0.312 |
+| d20-j2 | on | 879,802 | 440,369 | 0.417 |
+| d20-j13 | off | 732,146 | 361,489 | 0.322 |
+| d20-j13 | on | 879,802 | 440,369 | 0.420 |
+
+With the 1,701,336 global 5-set clauses included, each bounded d20 formula has
+2,581,138 clauses. These are construction measurements, not solver benchmarks
+or SAT/UNSAT claims.
 
 `discovery_runs.jsonl` records bounded discovery attempts that ended without a
 solver verdict. `INTERRUPTED_NO_VERDICT` means exactly that: it is throughput
