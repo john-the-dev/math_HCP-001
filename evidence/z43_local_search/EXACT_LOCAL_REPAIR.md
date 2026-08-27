@@ -29,12 +29,14 @@ for radius in 1 2 3 4; do
   ./run_exact_local_repair.sh "$radius" /tmp/z43-local \
     "$(command -v cadical)" /path/to/drat-trim ascii
 done
-for radius in 5 6 7 8 9 10 11; do
+for radius in 5 6 7 8 9 10; do
   ./run_exact_local_repair.sh "$radius" /tmp/z43-local \
     "$(command -v cadical)" /path/to/drat-trim binary
 done
-./run_exact_local_repair.sh 12 /tmp/z43-local \
-  "$(command -v cadical)" /path/to/drat-trim binary 3600
+for radius in 11 12; do
+  ./run_exact_local_repair.sh "$radius" /tmp/z43-local \
+    "$(command -v cadical)" /path/to/drat-trim binary 3600
+done
 python3 verify_exact_local_evidence.py
 ```
 
@@ -104,7 +106,7 @@ lines. Each transcript reports `s VERIFIED`.
 The exact conclusion is: no `(5,5)`-avoiding graph on labeled vertices
 `0..42` differs in at most twelve edge positions from this exact seed.
 
-## Radius-11 run history
+## Radius-11 and radius-12 run history
 
 A first radius-11 attempt generated the deterministic 10,836-variable,
 1,945,833-clause CNF recorded in the table above.
@@ -126,5 +128,5 @@ The radius-12 continuation generated the deterministic 11,739-variable,
 seconds and wrote a 1,631,318,478-byte binary proof. The pinned checker exited
 0 with exact `s VERIFIED` after 525.679 seconds; its backward check used
 395,601,802 resolution steps and zero RAT lemmas. This checked radius-12 proof,
-rather than either exact-shell timeout on the sibling branch, supports the
-current fixed-label conclusion.
+rather than either exact-shell timeout attempt, supports the current
+fixed-label conclusion.
