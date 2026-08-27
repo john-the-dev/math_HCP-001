@@ -41,10 +41,13 @@ def main():
         assert default_graph.read_bytes() == explicit_graph.read_bytes()
 
         fixed = run(
-            binary, "--seconds", "0", "--kick-min", "64", "--kick-max", "64",
+            binary, "--seconds", "0.05", "--restart-after", "1",
+            "--kick-min", "64", "--kick-max", "64",
             "--output", str(tmp / "fixed.txt"),
         )
         assert fixed.returncode == 2
+        restarts = re.search(r"restarts=(\d+)", fixed.stdout)
+        assert restarts is not None and int(restarts.group(1)) > 0
 
         for bounds in (("-1", "8"), ("25", "24"), ("0", "904")):
             invalid = run(binary, "--kick-min", bounds[0], "--kick-max", bounds[1])
