@@ -40,6 +40,7 @@ done
 ./run_exact_local_repair.sh 13 /tmp/z43-local \
   "$(command -v cadical)" /path/to/drat-trim binary 7200
 python3 verify_exact_local_evidence.py
+python3 verify_exact_shell_evidence.py
 ```
 
 The runner treats only CaDiCaL status 20 followed by `drat-trim`'s exact
@@ -181,8 +182,21 @@ independent graph verifier. Two continuation attempts had these outcomes:
 |---:|---:|---:|---|---:|---:|---:|---|
 | 11 | 10,836 | 1,964,687 | `339f67c34c6ba93b9325924907545061c7bf40358f148d689df1fc1694218e8c` | 899.99 | 679.66 | 1,635.38 | UNKNOWN |
 | 12 | 11,739 | 1,968,253 | `3a868c8ec523d78f0550ddb17e6b22a1f1fd51a8c76ee67fa1f8b022a1b86c6b` | 899.98 | 655.00 | 1,530.92 | UNKNOWN |
+| 13 | 12,642 | 1,971,815 | `fa1f2fc2c3bec954a2e1800356819d21347908497b4b0f1cf2688bb270c22a50` | 2,398.01 | 2,282.99 | 1,646.36 | UNSAT, VERIFIED |
 
-Both used CaDiCaL's 900-second cap and returned status 0. The runner mapped
-each to failure and did not invoke `drat-trim`; neither partial trace was
-checked or used as evidence. The direct at-most radius-12 proof above, rather
-than either shell attempt, establishes the current fixed-label exclusion.
+The distance-11 and distance-12 attempts used CaDiCaL's 900-second cap and
+returned status 0. The runner mapped each to failure and did not invoke
+`drat-trim`; neither partial trace was checked or used as evidence.
+
+The distance-13 run returned UNSAT and wrote a 2,635,713,082-byte binary proof
+with SHA-256
+`8b53cdbdcaabec794494d48447345674f76bc3a60125db1aa8f493856a048dcc`.
+The pinned checker exited 0 with exact `s VERIFIED` after 1,249.823 seconds;
+its backward check retained 4,208,939 of 10,669,159 lemmas and used
+1,207,411,713 resolution steps, zero RAT lemmas, and 12,882,099 redundant
+literals. The raw checker stream has SHA-256
+`2ad121317b384413483b7d2c85a1bfbc408c82b626e7e1c95ae4f8269a286e38`;
+the normalized committed transcript is under `exact_verification_logs/`.
+Together with the independently checked at-most radius-12 proof, this exact
+shell is a second certificate decomposition of the fixed-label radius-13
+conclusion. The direct at-most radius-13 proof remains independently sufficient.

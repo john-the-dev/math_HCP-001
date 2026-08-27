@@ -14,6 +14,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import exact_local_repair as repair
 import verify_exact_local_evidence as evidence
+import verify_exact_shell_evidence as shell_evidence
 
 
 def satisfies(clause, assignment):
@@ -135,6 +136,12 @@ class ExactLocalRepairTest(unittest.TestCase):
 
     def test_documented_hash_table_matches_verifier(self):
         evidence.verify()
+
+    def test_exact_shell_certificate_matches_verifier(self):
+        shell_evidence.verify()
+        logs = HERE / "exact_verification_logs"
+        self.assertEqual([path.name for path in logs.glob("*.log")],
+                         ["r13.drat-trim.log"])
 
     def test_runner_fails_closed_when_solver_times_out(self):
         runner = HERE / "run_exact_local_repair.sh"
