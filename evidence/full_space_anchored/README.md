@@ -92,3 +92,8 @@ python3 anchored_sat.py --degree 20 --edges 410 --a-internal-degree 7 \
   --json d20-e410-j7.json
 drat-trim d20-e410-j7.cnf d20-e410-j7.drat
 ```
+
+Optional redundant propagation cuts can be selected with
+`--propagation-cuts pair`, `triple`, or `all`. They preserve the graph-model
+space but can substantially enlarge the CNF; see `PROPAGATION_CUTS.md` for the
+soundness argument, exhaustive encoding audit, and construction measurements.

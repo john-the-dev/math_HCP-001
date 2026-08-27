@@ -42,7 +42,52 @@ def degree_leq_clauses(u, w, pool):
         vpool=pool, encoding=EncType.seqcounter).clauses
 
 
-def core_clauses(degree, edge_count=None, a_internal_degree=None):
+def conditional_conjunction_atmost(clauses, pool, conjunctions, bound, guard):
+    """Add guard => AtMost(bound, conjunctions), exact after projection."""
+    disabled = [-literal for literal in guard]
+    indicators = []
+    for conjunction in conjunctions:
+        indicator = pool.id()
+        indicators.append(indicator)
+        clauses.append(
+            [indicator] + [-literal for literal in conjunction] + disabled)
+    encoding = CardEnc.atmost(
+        indicators, bound=bound, vpool=pool, encoding=EncType.seqcounter)
+    clauses.extend(clause + disabled for clause in encoding.clauses)
+
+
+def propagation_cut_clauses(clauses, pool, mode):
+    require(mode in ("none", "pair", "triple", "all"),
+            "propagation cuts must be none, pair, triple, or all")
+    if mode in ("pair", "all"):
+        for u, v in PAIRS:
+            others = [w for w in range(N) if w not in (u, v)]
+            conditional_conjunction_atmost(
+                clauses, pool,
+                ((edge_var(u, w), edge_var(v, w)) for w in others),
+                13, (edge_var(u, v),))
+            conditional_conjunction_atmost(
+                clauses, pool,
+                ((-edge_var(u, w), -edge_var(v, w)) for w in others),
+                13, (-edge_var(u, v),))
+    if mode in ("triple", "all"):
+        for u, v, w in combinations(range(N), 3):
+            others = [z for z in range(N) if z not in (u, v, w)]
+            triangle = (edge_var(u, v), edge_var(u, w), edge_var(v, w))
+            conditional_conjunction_atmost(
+                clauses, pool,
+                ((edge_var(u, z), edge_var(v, z), edge_var(w, z))
+                 for z in others),
+                4, triangle)
+            conditional_conjunction_atmost(
+                clauses, pool,
+                ((-edge_var(u, z), -edge_var(v, z), -edge_var(w, z))
+                 for z in others),
+                4, tuple(-literal for literal in triangle))
+
+
+def core_clauses(degree, edge_count=None, a_internal_degree=None,
+                 propagation_cuts="none"):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
@@ -101,6 +146,7 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None):
     else:
         clauses.extend(CardEnc.equals(
             edges, bound=edge_count, vpool=pool, encoding=EncType.seqcounter).clauses)
+    propagation_cut_clauses(clauses, pool, propagation_cuts)
     return clauses, pool.top
 
 
@@ -183,7 +229,7 @@ def write_dimacs(path, clauses, top):
 
 def solve(args):
     clauses, top = core_clauses(
-        args.degree, args.edges, args.a_internal_degree)
+        args.degree, args.edges, args.a_internal_degree, args.propagation_cuts)
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -191,7 +237,8 @@ def solve(args):
 
     started = time.perf_counter()
     print(f"degree={args.degree} edge_partition={args.edges} "
-          f"a_internal_degree={args.a_internal_degree}")
+          f"a_internal_degree={args.a_internal_degree} "
+          f"propagation_cuts={args.propagation_cuts}")
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,
@@ -208,6 +255,7 @@ def solve(args):
             "degree": args.degree,
             "edge_partition": args.edges,
             "a_internal_degree": args.a_internal_degree,
+            "propagation_cuts": args.propagation_cuts,
             "solver": args.solver,
             "result": result,
             "vars": top,
@@ -278,6 +326,9 @@ def main():
     parser.add_argument("--edges", type=int)
     parser.add_argument("--a-internal-degree", type=int)
     parser.add_argument("--solver", default="cadical195")
+    parser.add_argument("--propagation-cuts",
+                        choices=("none", "pair", "triple", "all"),
+                        default="none")
     parser.add_argument("--cnf")
     parser.add_argument("--proof")
     parser.add_argument("--json")
