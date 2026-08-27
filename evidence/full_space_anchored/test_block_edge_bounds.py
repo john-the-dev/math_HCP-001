@@ -114,11 +114,13 @@ class BlockEdgeBoundsTests(unittest.TestCase):
         for j in (2, 13):
             bounded, bounded_top = SAT.core_clauses(
                 20, None, j, enforce_block_degree_bounds=False,
-                enforce_block_pair_common_bounds=False)
+                enforce_block_pair_common_bounds=False,
+                enforce_cross_pair_common_bounds=False)
             unbounded, unbounded_top = SAT.core_clauses(
                 20, None, j, enforce_block_edge_bounds=False,
                 enforce_block_degree_bounds=False,
-                enforce_block_pair_common_bounds=False)
+                enforce_block_pair_common_bounds=False,
+                enforce_cross_pair_common_bounds=False)
             self.assertEqual((len(unbounded), unbounded_top),
                              (634614, 312247))
             self.assertEqual((len(bounded), bounded_top),
