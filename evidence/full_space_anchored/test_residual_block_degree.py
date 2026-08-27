@@ -160,30 +160,31 @@ class ResidualBlockDegreeTests(unittest.TestCase):
                 return []
 
         cases = (
-            (None, None, False, False, "not-applicable", False, False),
-            (0, None, False, False, "not-applicable", False, False),
-            (2, None, False, False, "not-applicable", False, False),
-            (None, 8, False, False, "not-applicable", False, False),
-            (0, 8, False, False, "enabled", True, True),
-            (2, 8, False, False, "enabled", True, True),
-            (2, 8, True, False, "disabled", False, True),
-            (2, 8, False, True, "disabled", True, False),
+            (20, None, None, False, False, "not-applicable", False, False),
+            (18, 0, None, False, False, "not-applicable", False, False),
+            (20, 2, None, False, False, "not-applicable", False, False),
+            (20, None, 8, False, False, "not-applicable", False, False),
+            (18, 0, 10, False, False, "enabled", True, True),
+            (20, 2, 8, False, False, "enabled", True, True),
+            (20, 2, 8, True, False, "disabled", False, True),
+            (20, 2, 8, False, True, "disabled", True, False),
         )
-        for j, k, cross_off, residual_off, state, cross_active, residual_active in cases:
+        for (degree, j, k, cross_off, residual_off, state, cross_active,
+             residual_active) in cases:
             for cross_pair_off in (False, True):
                 for cross_pair_degree_off in (False, True):
                     with self.subTest(
-                            j=j, k=k, cross_off=cross_off,
+                            degree=degree, j=j, k=k, cross_off=cross_off,
                             residual_off=residual_off,
                             cross_pair_off=cross_pair_off,
                             cross_pair_degree_off=cross_pair_degree_off):
                         self._check_solve_provenance_case(
-                            j, k, cross_off, residual_off, state,
+                            degree, j, k, cross_off, residual_off, state,
                             cross_active, residual_active, cross_pair_off,
                             cross_pair_degree_off, FakeSolver)
 
     def _check_solve_provenance_case(
-            self, j, k, cross_off, residual_off, state, cross_active,
+            self, degree, j, k, cross_off, residual_off, state, cross_active,
             residual_active, cross_pair_off, cross_pair_degree_off,
             fake_solver_class):
         core_calls = []
@@ -200,7 +201,7 @@ class ResidualBlockDegreeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw_temp:
             result_path = Path(raw_temp) / "result.json"
             args = SimpleNamespace(
-                degree=20, edges=None, a_internal_degree=j,
+                degree=degree, edges=None, a_internal_degree=j,
                 a_total_degree=None, b_internal_degree=k,
                 a_edges=None, no_block_edge_bounds=False,
                 no_block_degree_bounds=False,
@@ -237,7 +238,7 @@ class ResidualBlockDegreeTests(unittest.TestCase):
         self.assertIn(f"cross_block_pair_common_bounds={cross_pair_state}",
                       output.getvalue())
         a_pair_applicable = j is not None and j > 0
-        b_pair_applicable = k is not None and 20 + k + 1 < SAT.N
+        b_pair_applicable = k is not None and degree + k + 1 < SAT.N
         a_pair_active = not cross_pair_degree_off and a_pair_applicable
         b_pair_active = not cross_pair_degree_off and b_pair_applicable
         pair_state = SAT.configured_side_bound_state(

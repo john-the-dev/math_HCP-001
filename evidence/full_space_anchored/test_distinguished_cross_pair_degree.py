@@ -105,23 +105,23 @@ class DistinguishedCrossPairDegreeTests(unittest.TestCase):
         for x in common[1:4]:
             set_edge(adjacency, common[0], x)
         SAT.verify_distinguished_cross_pair_degree_bounds(
-            adjacency, 20, 1, None)
+            adjacency, 20, 2, None)
         set_edge(adjacency, common[0], common[4])
         with self.assertRaisesRegex(ValueError, "A cross-pair neighbor"):
             SAT.verify_distinguished_cross_pair_degree_bounds(
-                adjacency, 20, 1, None)
+                adjacency, 20, 2, None)
 
         adjacency = [0] * SAT.N
         for x in range(20, 26):
             set_edge(adjacency, 0, x)
             set_edge(adjacency, 1, x)
         SAT.verify_distinguished_cross_pair_degree_bounds(
-            adjacency, 20, 1, None)
+            adjacency, 20, 2, None)
         set_edge(adjacency, 0, 26)
         set_edge(adjacency, 1, 26)
         with self.assertRaisesRegex(ValueError, "A cross-pair nonneighbor"):
             SAT.verify_distinguished_cross_pair_degree_bounds(
-                adjacency, 20, 1, None)
+                adjacency, 20, 2, None)
 
         adjacency = [0] * SAT.N
         for x in range(6, 20):
@@ -129,25 +129,25 @@ class DistinguishedCrossPairDegreeTests(unittest.TestCase):
         for u, v in SAT.combinations(range(6), 2):
             set_edge(adjacency, u, v)
         SAT.verify_distinguished_cross_pair_degree_bounds(
-            adjacency, 20, None, 20)
+            adjacency, 20, None, 13)
         adjacency[20] &= ~(1 << 6)
         adjacency[6] &= ~(1 << 20)
         for x in range(6):
             set_edge(adjacency, x, 6)
         with self.assertRaisesRegex(ValueError, "B cross-pair neighbor"):
             SAT.verify_distinguished_cross_pair_degree_bounds(
-                adjacency, 20, None, 20)
+                adjacency, 20, None, 13)
 
         adjacency = [0] * SAT.N
         for x in range(4, 20):
             set_edge(adjacency, 20, x)
         SAT.verify_distinguished_cross_pair_degree_bounds(
-            adjacency, 20, None, 20)
+            adjacency, 20, None, 13)
         adjacency[20] &= ~(1 << 4)
         adjacency[4] &= ~(1 << 20)
         with self.assertRaisesRegex(ValueError, "B cross-pair nonneighbor"):
             SAT.verify_distinguished_cross_pair_degree_bounds(
-                adjacency, 20, None, 20)
+                adjacency, 20, None, 13)
 
     def test_independent_activation_and_exact_deltas(self):
         cases = (
