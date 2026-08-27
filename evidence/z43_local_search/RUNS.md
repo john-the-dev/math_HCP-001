@@ -57,3 +57,28 @@ Both outputs equal the starting graph and have SHA-256
 
 These longer timeouts are still only negative search observations, not an
 exclusion theorem.
+
+## Two four-hour large-kick runs
+
+Two runs tested restart perturbations much larger than the default 8--24
+edge range. They ran concurrently on the same host:
+
+```sh
+/usr/bin/time -l /tmp/z43_tabu_large --seed 503 --seconds 14400 \
+  --noise 25 --tenure 9 --restart-after 20000 \
+  --kick-min 64 --kick-max 128 --output /tmp/z43-large-seed503-14400.txt
+/usr/bin/time -l /tmp/z43_tabu_large --seed 607 --seconds 14400 \
+  --noise 40 --tenure 5 --restart-after 15000 \
+  --kick-min 128 --kick-max 256 --output /tmp/z43-large-seed607-14400.txt
+```
+
+Seed 503 completed 3,305,498 moves and 165 restarts; seed 607 completed
+787,879 moves and 52 restarts. Each ran for 14,400 seconds and used at most
+124,960,768 bytes RSS. Neither improved `F=2`; both returned exit 2. The
+independent verifier checked all 962,598 five-sets in each output and reported
+`K5=0`, `I5=2`, `F=2`, also with exit 2. Both output files equal the starting
+graph and have SHA-256
+`b13c0207149ff618acef13c822a4841ef21d60782dd40b94317887ad2d28beec`.
+
+These runs test two bounded heuristic trajectories only. They do not exclude
+another trajectory or any graph outside the explored states.
