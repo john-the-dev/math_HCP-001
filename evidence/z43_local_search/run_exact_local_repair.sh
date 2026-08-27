@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 4 || $# -gt 6 ]]; then
-  echo "usage: $0 RADIUS OUTPUT_DIR CADICAL DRAT_TRIM [binary|ascii] [timeout-seconds]" >&2
+if [[ $# -lt 4 || $# -gt 7 ]]; then
+  echo "usage: $0 RADIUS OUTPUT_DIR CADICAL DRAT_TRIM [binary|ascii] [timeout-seconds] [at-most|exact]" >&2
   exit 2
 fi
 
@@ -12,6 +12,7 @@ cadical="$3"
 drat_trim="$4"
 proof_format="${5:-binary}"
 timeout_seconds="${6:-900}"
+distance_mode="${7:-at-most}"
 if [[ "$proof_format" == binary ]]; then
   proof_option="--binary=true"
 elif [[ "$proof_format" == ascii ]]; then
@@ -24,12 +25,21 @@ if [[ ! "$timeout_seconds" =~ ^[1-9][0-9]*$ ]]; then
   echo "timeout must be a positive integer" >&2
   exit 2
 fi
+if [[ "$distance_mode" != at-most && "$distance_mode" != exact ]]; then
+  echo "distance mode must be at-most or exact" >&2
+  exit 2
+fi
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$output_dir"
-prefix="$output_dir/z43-local-r$radius"
+suffix="r$radius"
+if [[ "$distance_mode" == exact ]]; then
+  suffix="$suffix-exact"
+fi
+prefix="$output_dir/z43-local-$suffix"
 
 python3 "$script_dir/exact_local_repair.py" build \
-  --radius "$radius" --output "$prefix.cnf" --metadata "$prefix.json"
+  --radius "$radius" --distance-mode "$distance_mode" \
+  --output "$prefix.cnf" --metadata "$prefix.json"
 
 set +e
 "$cadical" --seed=0 --checkproof=3 "$proof_option" -t "$timeout_seconds" \

@@ -45,6 +45,57 @@ class ExactLocalRepairTest(unittest.TestCase):
                             break
                     self.assertEqual(extendable, sum(bits) <= bound, (size, bound, bits))
 
+    def test_exact_counter_truth_table(self):
+        for size in range(1, 5):
+            for bound in range(-1, size + 2):
+                inputs = list(range(1, size + 1))
+                first_aux = size + 1
+                clauses = list(repair.exactly_clauses(
+                    inputs, bound, first_aux))
+                aux_count = size * bound if 0 < bound < size else 0
+                for bits in itertools.product((False, True), repeat=size):
+                    extendable = False
+                    for aux in itertools.product(
+                            (False, True), repeat=aux_count):
+                        assignment = {
+                            i + 1: value
+                            for i, value in enumerate(bits + aux)
+                        }
+                        if all(satisfies(clause, assignment)
+                               for clause in clauses):
+                            extendable = True
+                            break
+                    self.assertEqual(
+                        extendable, sum(bits) == bound,
+                        (size, bound, bits))
+
+    def test_exact_eleven_extends_at_most_counter(self):
+        flips = list(range(1, 904))
+        at_most = list(repair.at_most_clauses(flips, 11, 904))
+        exact = list(repair.exactly_clauses(flips, 11, 904))
+        self.assertEqual(len(at_most), 20637)
+        self.assertEqual(exact[:len(at_most)], at_most)
+        self.assertEqual(len(exact) - len(at_most), 18854)
+        self.assertEqual(2 * repair.math.comb(repair.N, 5) + len(exact),
+                         1964687)
+
+    def test_decoder_rejects_wrong_expected_distance_before_writing(self):
+        values = [
+            i if repair.seed_value(edge) else -i
+            for i, edge in enumerate(repair.all_edges(), start=1)
+        ]
+        with tempfile.TemporaryDirectory() as raw_temp:
+            temp = Path(raw_temp)
+            model = temp / "model.txt"
+            output = temp / "graph.txt"
+            model.write_text(
+                "s SATISFIABLE\n" + "v " + " ".join(map(str, values))
+                + " 0\n")
+            with self.assertRaisesRegex(SystemExit,
+                                        "decoded distance 0, expected 11"):
+                repair.decode_model(model, output, expected_distance=11)
+            self.assertFalse(output.exists())
+
     def test_base_model_has_two_clauses_per_five_set(self):
         model = repair.local_model(903)
         first = next(model)
@@ -125,6 +176,34 @@ class ExactLocalRepairTest(unittest.TestCase):
             self.assertEqual(completed.returncode, 2)
             self.assertIn("timeout must be a positive integer",
                           completed.stderr)
+
+    def test_runner_routes_exact_mode_to_distinct_artifacts(self):
+        runner = HERE / "run_exact_local_repair.sh"
+        with tempfile.TemporaryDirectory() as raw_temp:
+            temp = Path(raw_temp)
+            recorded = temp / "build-args"
+            fake_python = temp / "python3"
+            fake_solver = temp / "cadical"
+            fake_checker = temp / "drat-trim"
+            fake_python.write_text(
+                f"#!/bin/sh\nprintf '%s\\n' \"$@\" > '{recorded}'\n")
+            fake_solver.write_text("#!/bin/sh\nexit 0\n")
+            fake_checker.write_text("#!/bin/sh\nexit 99\n")
+            for executable in (fake_python, fake_solver, fake_checker):
+                executable.chmod(0o755)
+            environment = os.environ.copy()
+            environment["PATH"] = f"{temp}:{environment['PATH']}"
+            completed = subprocess.run(
+                [runner, "11", temp / "output", fake_solver, fake_checker,
+                 "binary", "900", "exact"],
+                text=True, capture_output=True, env=environment)
+            self.assertEqual(completed.returncode, 1)
+            arguments = recorded.read_text().splitlines()
+            self.assertIn("--distance-mode", arguments)
+            self.assertIn("exact", arguments)
+            self.assertIn(
+                str(temp / "output" / "z43-local-r11-exact.cnf"),
+                arguments)
 
 
 if __name__ == "__main__":

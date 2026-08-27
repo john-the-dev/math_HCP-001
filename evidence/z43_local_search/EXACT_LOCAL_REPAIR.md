@@ -141,3 +141,41 @@ wrote a 2,712,997,050-byte binary proof. The pinned checker exited 0 with exact
 `s VERIFIED` after 764.368 seconds; its backward check used 671,936,876
 resolution steps and zero RAT lemmas. This checked direct proof establishes
 the fixed-label radius-13 conclusion without relying on an exact-shell result.
+
+## Exact-shell continuation
+
+The verified radius-12 certificate permits a disjoint decomposition of the
+next ball. If the Ramsey clauses are `F` and `D` is Hamming distance from the
+fixed seed, then
+
+```text
+{D <= 13} = {D <= 12} disjoint-union {D = 13}.
+```
+
+Consequently, a separately checked UNSAT proof for `F and D=13`, together
+with the existing checked proof for `F and D<=12`, would certify the same
+fixed-label radius-13 ball. An exact-shell proof alone would not do so, and
+the two DRAT traces must not be concatenated because they have different
+initial CNFs and auxiliary meanings.
+
+`exact_local_repair.py build --distance-mode exact` makes the existing
+one-way sequential-counter states bidirectional and asserts the terminal
+state. Merely asserting that state without the reverse clauses would be
+unsound because the original auxiliary variables may otherwise float true.
+For distance 12, the exact-shell encoding retains the 11,739 variables of the
+at-most formula and adds 20,638 clauses, for 1,968,253 total. The original
+at-most clause stream remains the exact prefix, and the default mode remains
+byte-compatible with the radius 1--12 generator.
+
+```sh
+./run_exact_local_repair.sh 13 /tmp/z43-shell \
+  "$(command -v cadical)" /path/to/drat-trim binary 3600 exact
+```
+
+Exact-mode artifacts use a distinct `z43-local-rN-exact` stem. A SAT output
+must be decoded with the matching `--expected-distance`, then checked with the
+independent graph verifier. A 900-second exact-distance-11 attempt and a
+separate 900-second exact-distance-12 attempt both returned UNKNOWN with
+status 0; neither partial trace was checked or used as evidence. The direct
+at-most radius-12 proof above, rather than either shell attempt, establishes
+the current fixed-label exclusion.
