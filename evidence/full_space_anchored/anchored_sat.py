@@ -41,6 +41,11 @@ def a_internal_bounds(degree):
     return max(0, degree - 18), 13
 
 
+def a_total_degree_bounds(degree, a_internal_degree):
+    return (max(degree - 1, a_internal_degree),
+            min(23, a_internal_degree + N - degree))
+
+
 def b_minimum_internal_bounds(degree):
     b_size = N - degree
     _, b_maximum_edges = block_edge_bounds(degree)[1]
@@ -182,7 +187,8 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
                  enforce_block_degree_bounds=True,
                  enforce_block_pair_common_bounds=True,
                  b_internal_degree=None,
-                 enforce_global_pair_common_bounds=True):
+                 enforce_global_pair_common_bounds=True,
+                 a_total_degree=None):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
@@ -192,6 +198,13 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
         lower_j, upper_j = a_internal_bounds(degree)
         require(lower_j <= a_internal_degree <= upper_j,
                 f"A-internal degree must be in {lower_j}..{upper_j}")
+    if a_total_degree is not None:
+        require(a_internal_degree is not None,
+                "A-total degree requires A-internal degree")
+        lower_t, upper_t = a_total_degree_bounds(
+            degree, a_internal_degree)
+        require(lower_t <= a_total_degree <= upper_t,
+                f"A-total degree must be in {lower_t}..{upper_t}")
     if b_internal_degree is not None:
         lower_k, upper_k = b_minimum_internal_bounds(degree)
         require(lower_k <= b_internal_degree <= upper_k,
@@ -248,6 +261,11 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
         # the residual symmetry blocks preserved by its fixed neighborhood.
         for vertex in range(1, degree):
             clauses.extend(degree_leq_clauses(0, vertex, pool))
+        if a_total_degree is not None:
+            incident = [edge_var(0, vertex) for vertex in range(1, N)]
+            clauses.extend(CardEnc.equals(
+                incident, bound=a_total_degree, vpool=pool,
+                encoding=EncType.seqcounter).clauses)
         a_symmetry_blocks = (
             list(range(1, j + 1)),
             list(range(j + 1, degree)),
@@ -375,6 +393,28 @@ def verify_global_pair_common_bounds(adjacency):
     return maxima
 
 
+def verify_distinguished_a(adjacency, degree, a_internal_degree,
+                           a_total_degree=None, degrees=None):
+    j = a_internal_degree
+    if degrees is None:
+        degrees = [row.bit_count() for row in adjacency]
+    require(sum((adjacency[0] >> vertex) & 1
+                for vertex in range(1, degree)) == j,
+            "distinguished A-internal degree violated")
+    for vertex in range(1, degree):
+        require(bool((adjacency[0] >> vertex) & 1) == (vertex <= j),
+                "fixed distinguished neighborhood violated")
+    require(all(degrees[0] <= degrees[vertex]
+                for vertex in range(1, degree)),
+            "distinguished vertex is not minimum-degree in A")
+    if a_total_degree is not None:
+        require(degrees[0] == a_total_degree,
+                "distinguished A-total degree violated")
+    for block in (degrees[1:j + 1], degrees[j + 1:degree]):
+        require(block == sorted(block), "residual A block is unsorted")
+    return degrees[0]
+
+
 def verify_distinguished_b(adjacency, degree, b_internal_degree, degrees=None):
     block_b = range(degree, N)
     distinguished_b = degree
@@ -405,7 +445,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
                  enforce_block_degree_bounds=True,
                  enforce_block_pair_common_bounds=True,
                  b_internal_degree=None,
-                 enforce_global_pair_common_bounds=True):
+                 enforce_global_pair_common_bounds=True,
+                 a_total_degree=None):
     require(len(adjacency) == N, "model must contain 42 adjacency rows")
     for u in range(N):
         require(not (adjacency[u] >> u) & 1, "self edge")
@@ -440,18 +481,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
     if a_internal_degree is None:
         require(degrees[:degree] == sorted(degrees[:degree]), "A degrees unsorted")
     else:
-        j = a_internal_degree
-        require(sum((adjacency[0] >> vertex) & 1
-                    for vertex in range(1, degree)) == j,
-                "distinguished A-internal degree violated")
-        for vertex in range(1, degree):
-            require(bool((adjacency[0] >> vertex) & 1) == (vertex <= j),
-                    "fixed distinguished neighborhood violated")
-        require(all(degrees[0] <= degrees[vertex]
-                    for vertex in range(1, degree)),
-                "distinguished vertex is not minimum-degree in A")
-        for block in (degrees[1:j + 1], degrees[j + 1:degree]):
-            require(block == sorted(block), "residual A block is unsorted")
+        verify_distinguished_a(
+            adjacency, degree, a_internal_degree, a_total_degree, degrees)
     if b_internal_degree is None:
         require(degrees[degree:] == sorted(degrees[degree:]),
                 "B degrees unsorted")
@@ -505,7 +536,8 @@ def solve(args):
         enforce_block_pair_common_bounds=not args.no_block_pair_common_bounds,
         b_internal_degree=args.b_internal_degree,
         enforce_global_pair_common_bounds=(
-            not args.no_global_pair_common_bounds))
+            not args.no_global_pair_common_bounds),
+        a_total_degree=args.a_total_degree)
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -514,6 +546,8 @@ def solve(args):
     started = time.perf_counter()
     partition_line = (f"degree={args.degree} edge_partition={args.edges} "
                       f"a_internal_degree={args.a_internal_degree} ")
+    if args.a_total_degree is not None:
+        partition_line += f"a_total_degree={args.a_total_degree} "
     if args.b_internal_degree is not None:
         partition_line += f"b_internal_degree={args.b_internal_degree} "
     print(partition_line + f"a_edge_partition={args.a_edges}")
@@ -539,6 +573,7 @@ def solve(args):
             "degree": args.degree,
             "edge_partition": args.edges,
             "a_internal_degree": args.a_internal_degree,
+            "a_total_degree": args.a_total_degree,
             "a_edge_partition": args.a_edges,
             "block_edge_bounds": not args.no_block_edge_bounds,
             "block_degree_bounds": not args.no_block_degree_bounds,
@@ -567,7 +602,8 @@ def solve(args):
                     not args.no_block_pair_common_bounds),
                 b_internal_degree=args.b_internal_degree,
                 enforce_global_pair_common_bounds=(
-                    not args.no_global_pair_common_bounds))
+                    not args.no_global_pair_common_bounds),
+                a_total_degree=args.a_total_degree)
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
@@ -598,18 +634,32 @@ def write_manifest(path, mode):
             axes = ((k, j)
                     for j in range(minimum_j, maximum_j + 1)
                     for k in range(minimum_k, maximum_k + 1))
+        elif mode == "j-t-k":
+            minimum_k, maximum_k = b_minimum_internal_bounds(degree)
+            axes = (((k, t), j)
+                    for j in range(minimum_j, maximum_j + 1)
+                    for t in range(a_total_degree_bounds(degree, j)[0],
+                                   a_total_degree_bounds(degree, j)[1] + 1)
+                    for k in range(minimum_k, maximum_k + 1))
         else:
             axes = ((None, j) for j in range(minimum_j, maximum_j + 1))
         for partition_value, j in axes:
             edge_count = partition_value if mode == "edge-j" else None
             a_edge_count = partition_value if mode == "a-edge-j" else None
             b_internal_degree = partition_value if mode == "j-k" else None
+            if mode == "j-t-k":
+                b_internal_degree, a_total_degree = partition_value
+            else:
+                a_total_degree = None
             edge_part = f"-e{edge_count}" if edge_count is not None else ""
             a_edge_part = (f"-a{a_edge_count}"
                            if a_edge_count is not None else "")
             b_degree_part = (f"-k{b_internal_degree}"
                              if b_internal_degree is not None else "")
-            key = f"d{degree}{edge_part}{a_edge_part}-j{j}{b_degree_part}"
+            a_total_part = (f"-t{a_total_degree}"
+                            if a_total_degree is not None else "")
+            key = (f"d{degree}{edge_part}{a_edge_part}-j{j}"
+                   f"{a_total_part}{b_degree_part}")
             row = {
                 "id": key,
                 "degree": degree,
@@ -631,6 +681,16 @@ def write_manifest(path, mode):
                            b_internal_degree_min=minimum_k,
                            b_internal_degree_max=maximum_k,
                            edge_min=minimum, edge_max=maximum)
+            elif mode == "j-t-k":
+                minimum_k, maximum_k = b_minimum_internal_bounds(degree)
+                minimum_t, maximum_t = a_total_degree_bounds(degree, j)
+                row.update(a_total_degree=a_total_degree,
+                           a_total_degree_min=minimum_t,
+                           a_total_degree_max=maximum_t,
+                           b_internal_degree=b_internal_degree,
+                           b_internal_degree_min=minimum_k,
+                           b_internal_degree_max=maximum_k,
+                           edge_min=minimum, edge_max=maximum)
             partitions.append(row)
     manifest = {
         "schema": 1,
@@ -646,6 +706,10 @@ def write_manifest(path, mode):
                "k is the B-internal degree of a chosen minimum-internal-"
                "degree vertex of B; every admissible k is fixed"
                if mode == "j-k" else
+               "t is the full H-degree of the distinguished A vertex and "
+               "k is the minimum B-internal degree; every admissible "
+               "(t,k) pair is fixed"
+               if mode == "j-t-k" else
                "H edge count is not fixed, with the degree-implied lower "
                "bound and |E(H)| <= 451-d enforced inside each formula")
         ),
@@ -662,6 +726,7 @@ def main():
     parser.add_argument("--edges", type=int)
     parser.add_argument("--a-edges", type=int)
     parser.add_argument("--a-internal-degree", type=int)
+    parser.add_argument("--a-total-degree", type=int)
     parser.add_argument("--b-internal-degree", type=int)
     parser.add_argument(
         "--no-block-edge-bounds", action="store_true",
@@ -682,7 +747,8 @@ def main():
     parser.add_argument("--list-partitions", action="store_true")
     parser.add_argument("--write-manifest")
     parser.add_argument("--manifest-mode",
-                        choices=("edge-j", "j-only", "a-edge-j", "j-k"),
+                        choices=("edge-j", "j-only", "a-edge-j", "j-k",
+                                 "j-t-k"),
                         default="edge-j")
     args = parser.parse_args()
     if args.write_manifest:

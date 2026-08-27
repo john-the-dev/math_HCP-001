@@ -252,6 +252,37 @@ per-vertex block-degree, and pair common-set bounds all enabled:
 These measurements include the global 5-set clauses only in the total-clause
 column. They exclude solving and make no SAT or UNSAT claim.
 
+### Distinguished-A total-degree refinement
+
+The `j-t-k` frontier further fixes `t=deg_H(0)`, the full degree of the
+already distinguished minimum-degree vertex of `A`. This is an exhaustive
+partition, not an added structural assumption: every representative in a
+`(d,j,k)` case has exactly one such `t`. The existing degree bounds and the
+fixed `j` give
+
+```text
+max(d-1,j) <= t <= min(23,j+42-d).
+```
+
+For the admissible `j` ranges this simplifies to `17..23`, `18..23`, and
+`19..23` for `d=18,19,20`. Splitting every `j-k` case by those values gives
+1,142 cases: 392 for `d=18`, 390 for `d=19`, and 360 for `d=20`.
+
+```sh
+python3 anchored_sat.py --write-manifest j_t_k_partition_manifest.json \
+  --manifest-mode j-t-k
+python3 verify_a_total_manifest.py j_t_k_partition_manifest.json
+python3 anchored_sat.py --degree 20 --a-internal-degree 2 \
+  --a-total-degree 19 --b-internal-degree 8 --solver glucose4 \
+  --cnf d20-j2-t19-k8.cnf --proof d20-j2-t19-k8.drat \
+  --json d20-j2-t19-k8.json
+```
+
+`verify_a_total_manifest.py` independently recomputes the 1,142-case cover,
+bounds, identifiers, and artifact names. It reuses the fail-closed completion
+ledger verifier for proof claims. The manifest itself makes no SAT or UNSAT
+claim.
+
 Adding the whole-`H` pair cuts to `d20-j2-k8` changed the core from 890,223
 clauses / 445,569 variables to 1,613,463 clauses / 757,251 variables on the
 same integration host. The global 1,701,336 five-set clauses are not included
