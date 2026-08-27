@@ -1,0 +1,19 @@
+summary steps=3305498 best_step=0 best_F=2 final_F=134 restarts=165 seed_F=2 five_sets=962598 incidence_entries=9625980 elapsed_seconds=14400
+    14400.10 real     11947.69 user        58.42 sys
+           124960768  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               91701  page reclaims
+                  30  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                  20  voluntary context switches
+             4254948  involuntary context switches
+      32772685398661  instructions retired
+      37509456299162  cycles elapsed
+           124584344  peak memory footprint

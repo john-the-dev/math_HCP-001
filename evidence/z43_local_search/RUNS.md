@@ -79,6 +79,8 @@ independent verifier checked all 962,598 five-sets in each output and reported
 `K5=0`, `I5=2`, `F=2`, also with exit 2. Both output files equal the starting
 graph and have SHA-256
 `b13c0207149ff618acef13c822a4841ef21d60782dd40b94317887ad2d28beec`.
+The final search summaries and `/usr/bin/time -l` resource reports are retained
+under `large_kick_logs/`.
 
 These runs test two bounded heuristic trajectories only. They do not exclude
 another trajectory or any graph outside the explored states.
