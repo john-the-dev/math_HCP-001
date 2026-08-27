@@ -81,8 +81,9 @@ proofs or checker logs, even when their proof checks succeed.
 
 The checker exited 0 at every radius. Raw output hashes bind the exact terminal
 streams; readable transcripts under `verification_logs/` remove terminal
-carriage control, blank lines, and trailing progress padding without changing
-the substantive lines. Each transcript reports `s VERIFIED`.
+carriage control, blank lines, trailing progress padding, and the
+`/usr/bin/time` resource footer without changing the substantive checker
+lines. Each transcript reports `s VERIFIED`.
 
 | radius | checker exit | raw checker-output SHA-256 |
 |---:|---:|---|
