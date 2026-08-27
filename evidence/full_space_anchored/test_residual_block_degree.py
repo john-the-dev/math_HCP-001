@@ -168,69 +168,81 @@ class ResidualBlockDegreeTests(unittest.TestCase):
             (2, 8, False, True, "disabled", True, False),
         )
         for j, k, cross_off, residual_off, state, cross_active, residual_active in cases:
-            with self.subTest(j=j, k=k, cross_off=cross_off,
-                              residual_off=residual_off):
-                core_calls = []
-                verify_calls = []
+            for cross_pair_off in (False, True):
+                with self.subTest(j=j, k=k, cross_off=cross_off,
+                                  residual_off=residual_off,
+                                  cross_pair_off=cross_pair_off):
+                    self._check_solve_provenance_case(
+                        j, k, cross_off, residual_off, state, cross_active,
+                        residual_active, cross_pair_off, FakeSolver)
 
-                def fake_core(**kwargs):
-                    core_calls.append(kwargs)
-                    return [], len(SAT.PAIRS)
+    def _check_solve_provenance_case(
+            self, j, k, cross_off, residual_off, state, cross_active,
+            residual_active, cross_pair_off, fake_solver_class):
+        core_calls = []
+        verify_calls = []
 
-                def fake_verify(*_args, **kwargs):
-                    verify_calls.append(kwargs)
-                    return {}
+        def fake_core(**kwargs):
+            core_calls.append(kwargs)
+            return [], len(SAT.PAIRS)
 
-                with tempfile.TemporaryDirectory() as raw_temp:
-                    result_path = Path(raw_temp) / "result.json"
-                    args = SimpleNamespace(
-                        degree=20, edges=None, a_internal_degree=j,
-                        a_total_degree=None, b_internal_degree=k,
-                        a_edges=None, no_block_edge_bounds=False,
-                        no_block_degree_bounds=False,
-                        no_block_pair_common_bounds=False,
-                        no_global_pair_common_bounds=False,
-                        no_cross_block_pair_common_bounds=False,
-                        no_distinguished_cross_triple_bounds=cross_off,
-                        no_residual_block_degree_bounds=residual_off,
-                        solver="glucose4", cnf=None, proof=None,
-                        json=str(result_path))
-                    output = io.StringIO()
-                    with (patch.object(SAT, "core_clauses", fake_core),
-                          patch.object(SAT, "verify_model", fake_verify),
-                          patch.object(SAT, "model_adjacency",
-                                       return_value=[0] * SAT.N),
-                          patch.object(SAT, "five_set_clauses",
-                                       return_value=iter(([], []))),
-                          patch.object(SAT, "comb", return_value=1),
-                          patch.object(SAT, "Solver", FakeSolver),
-                          redirect_stdout(output)):
-                        SAT.solve(args)
-                    record = json.loads(result_path.read_text())
-                self.assertIn(
-                    f"distinguished_cross_triple_bounds={state if cross_off == residual_off else 'disabled' if cross_off else 'enabled'}",
-                    output.getvalue())
-                residual_state = ("disabled" if residual_off else
-                                  "enabled" if j is not None and k is not None
-                                  else "not-applicable")
-                self.assertIn(f"residual_block_degree_bounds={residual_state}",
-                              output.getvalue())
-                self.assertIn("cross_block_pair_common_bounds=enabled",
-                              output.getvalue())
-                for call in core_calls + verify_calls:
-                    self.assertTrue(
-                        call["enforce_cross_block_pair_common_bounds"])
-                    self.assertEqual(
-                        call["enforce_distinguished_cross_triple_bounds"],
-                        cross_active)
-                    self.assertEqual(
-                        call["enforce_residual_block_degree_bounds"],
-                        residual_active)
-                self.assertEqual(record["distinguished_cross_triple_bounds"],
-                                 cross_active)
-                self.assertEqual(record["residual_block_degree_bounds"],
-                                 residual_active)
-                self.assertTrue(record["cross_block_pair_common_bounds"])
+        def fake_verify(*_args, **kwargs):
+            verify_calls.append(kwargs)
+            return {}
+
+        with tempfile.TemporaryDirectory() as raw_temp:
+            result_path = Path(raw_temp) / "result.json"
+            args = SimpleNamespace(
+                degree=20, edges=None, a_internal_degree=j,
+                a_total_degree=None, b_internal_degree=k,
+                a_edges=None, no_block_edge_bounds=False,
+                no_block_degree_bounds=False,
+                no_block_pair_common_bounds=False,
+                no_global_pair_common_bounds=False,
+                no_cross_block_pair_common_bounds=cross_pair_off,
+                no_distinguished_cross_triple_bounds=cross_off,
+                no_residual_block_degree_bounds=residual_off,
+                solver="glucose4", cnf=None, proof=None,
+                json=str(result_path))
+            output = io.StringIO()
+            with (patch.object(SAT, "core_clauses", fake_core),
+                  patch.object(SAT, "verify_model", fake_verify),
+                  patch.object(SAT, "model_adjacency",
+                               return_value=[0] * SAT.N),
+                  patch.object(SAT, "five_set_clauses",
+                               return_value=iter(([], []))),
+                  patch.object(SAT, "comb", return_value=1),
+                  patch.object(SAT, "Solver", fake_solver_class),
+                  redirect_stdout(output)):
+                SAT.solve(args)
+            record = json.loads(result_path.read_text())
+        self.assertIn(
+            f"distinguished_cross_triple_bounds={state if cross_off == residual_off else 'disabled' if cross_off else 'enabled'}",
+            output.getvalue())
+        residual_state = ("disabled" if residual_off else
+                          "enabled" if j is not None and k is not None
+                          else "not-applicable")
+        self.assertIn(f"residual_block_degree_bounds={residual_state}",
+                      output.getvalue())
+        cross_pair_state = "disabled" if cross_pair_off else "enabled"
+        self.assertIn(f"cross_block_pair_common_bounds={cross_pair_state}",
+                      output.getvalue())
+        for call in core_calls + verify_calls:
+            self.assertEqual(
+                call["enforce_cross_block_pair_common_bounds"],
+                not cross_pair_off)
+            self.assertEqual(
+                call["enforce_distinguished_cross_triple_bounds"],
+                cross_active)
+            self.assertEqual(
+                call["enforce_residual_block_degree_bounds"],
+                residual_active)
+        self.assertEqual(record["distinguished_cross_triple_bounds"],
+                         cross_active)
+        self.assertEqual(record["residual_block_degree_bounds"],
+                         residual_active)
+        self.assertEqual(record["cross_block_pair_common_bounds"],
+                         not cross_pair_off)
 
 
 if __name__ == "__main__":

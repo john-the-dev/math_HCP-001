@@ -52,9 +52,11 @@ class CrossBlockPairCommonTests(unittest.TestCase):
             self.assertEqual(calls, expected)
 
     def test_signed_conditional_counter_boundary(self):
-        for condition in (1, -1):
+        for sign in (1, -1):
+            condition = sign
             pool = IDPool(start_from=100)
-            conjunctions = [(2 * index + 2, 2 * index + 3)
+            conjunctions = [(sign * (2 * index + 2),
+                             sign * (2 * index + 3))
                             for index in range(10)]
             clauses = SAT._conditional_conjunction_atmost(
                 conjunctions, 8, condition, pool)
