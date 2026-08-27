@@ -60,7 +60,7 @@ class ExactLocalRepairTest(unittest.TestCase):
             [path.name for path in sorted(
                 logs.glob("*.log"),
                 key=lambda path: int(path.name[1:].split(".", 1)[0]))],
-            [f"r{radius}.drat-trim.log" for radius in range(1, 14)],
+            [f"r{radius}.drat-trim.log" for radius in range(1, 15)],
         )
         for path in logs.glob("*.log"):
             self.assertIn("\ns VERIFIED\n", path.read_text())
