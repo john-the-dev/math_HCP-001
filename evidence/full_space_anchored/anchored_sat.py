@@ -95,6 +95,7 @@ def _conditional_conjunction_atmost(conjunctions, bound, condition, pool):
     for conjunction in conjunctions:
         indicator = pool.id()
         indicators.append(indicator)
+        # condition is a signed literal; -condition intentionally flips it.
         clauses.append(
             [indicator] + [-literal for literal in conjunction] + [-condition])
     encoded = CardEnc.atmost(
@@ -105,7 +106,7 @@ def _conditional_conjunction_atmost(conjunctions, bound, condition, pool):
 
 
 def block_pair_common_clauses(degree, pool):
-    """Encode Ramsey bounds on pairwise common sets inside A and B."""
+    """Encode block common-set bounds; three require solve()'s K5/I5 clauses."""
     clauses = []
     for block_name, vertices in (("A", range(degree)),
                                  ("B", range(degree, N))):

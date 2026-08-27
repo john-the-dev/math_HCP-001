@@ -55,11 +55,15 @@ for diagnostic comparisons. It must not be used for the production proof ledger.
 `--no-block-degree-bounds` likewise disables only the per-vertex block-degree
 constraints for diagnostics; production formulas keep both families enabled.
 
-The induced block conditions also sharpen the generic pairwise Ramsey cuts.
+Together with the global no-K5/no-I5 clauses, the induced block conditions
+sharpen the generic pairwise Ramsey cuts. Three of the four bounds below use
+those global clauses, so `core_clauses()` by itself is only a construction
+component and cannot support a SAT or UNSAT claim.
 For an adjacent pair in `A`, its common neighbors in `A` form an independent
 set (otherwise there is a K4 in `A`), so there are at most four. For a
-nonadjacent pair in `A`, its common nonneighbors contain neither an I3 nor a
-K4, so `R(4,3)=9` bounds the set by eight. Dually, an adjacent pair in `B`
+nonadjacent pair in `A`, three independent common nonneighbors would form an
+I5 with the pair; the set also contains no K4, so `R(4,3)=9` bounds it by
+eight. Dually, an adjacent pair in `B`
 has at most eight common neighbors by `R(3,4)=9`, and a nonadjacent pair in
 `B` has at most four common nonneighbors. The exact default-on implications
 are:
