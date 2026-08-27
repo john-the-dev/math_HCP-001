@@ -26,3 +26,6 @@ python3 verify_solution.py z43_solution.txt
 ```
 
 No mathematical conclusion follows from a search that times out.
+
+The separate proof-producing search in `EXACT_LOCAL_REPAIR.md` exhaustively
+checks small fixed-label Hamming balls around the same seed.
