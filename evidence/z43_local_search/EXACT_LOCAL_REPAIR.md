@@ -38,11 +38,11 @@ decode` and audit the graph with the pre-existing independent
 
 ## Results
 
-The bounded experiment stopped after radius 8, well inside its 30-minute cap.
-Radius 8 logically subsumes radii 1--7: these are one nested exclusion checked
-at eight bounds, not eight independent assurances. The result rests on the
-radius-8 proof together with direct audit of the shared encoding; the smaller
-bounds are reproducibility and scaling checkpoints only.
+The bounded experiment now reaches radius 9. Radius 9 logically subsumes radii
+1--8: these are one nested exclusion checked at nine bounds, not nine
+independent assurances. The result rests on the radius-9 proof together with
+direct audit of the shared encoding; the smaller bounds are reproducibility
+and scaling checkpoints only.
 All solver times below are real seconds reported by CaDiCaL. Hashes bind both
 the generated CNF and the exact proof instance checked in this run; large
 transient artifacts were not committed. Radii 1--4 used ASCII DRAT and radii
@@ -63,6 +63,7 @@ checker outputs, not every valid reproduction proof.
 | 6 | binary | 6,321 | 1,936,893 | 48.53 | `606451f58561c5ae4d55330539e2e6c3cf1eeb7f35a556445d3f754bdbd6a540` | `3d8f975658a82d633ac4c78de714c22ad3e05d9dc91317e53a3022549a11c539` |
 | 7 | binary | 7,224 | 1,938,685 | 81.62 | `e9022858ae3b3eeb39eb76888fa5980b845ac284ddd363f20d6744852b62f784` | `b80373400fdd8821be31e9994c914f1ac3752fa162b97d9f8c2db4138e135eaf` |
 | 8 | binary | 8,127 | 1,940,475 | 137.16 | `9fac70649980dd0f757a879bfadd6fa5f68dff0e740d3f8d5e0c5cb2083a3c73` | `e43a0282f1d34f74e2486100d41adc9e3e6edce5322de9b6691fdf796552f12d` |
+| 9 | binary | 9,030 | 1,942,263 | 258.91 | `ffc36a6a4ddec53a415d38a77a9f7bd4d231d117fe1f6d86994648369f2c6f62` | `ee0202de75e58025f304f52e62e085e9eca2a6713b4ce8bfabdb95931d05a650` |
 
 The checker exited 0 at every radius. Raw output hashes bind the exact terminal
 streams; readable transcripts under `verification_logs/` remove terminal
@@ -79,6 +80,7 @@ the substantive lines. Each transcript reports `s VERIFIED`.
 | 6 | 0 | `b9e3ec2f299ace5a70d4c948a415b7308d66d90b00204304df174010eef97779` |
 | 7 | 0 | `7004311fb1a204efda45eeedefbb7b158cea0122b8b30e3049604c72f162069d` |
 | 8 | 0 | `a9b933d18485596e0c93fafbe759061c712e2cb71eb048ecacaf5a1783ea7345` |
+| 9 | 0 | `861456b7a876d2c436ea14993aa833c65b6d5a97112d44d224f08bacae788bb8` |
 
 The exact conclusion is: no `(5,5)`-avoiding graph on labeled vertices
-`0..42` differs in at most eight edge positions from this exact seed.
+`0..42` differs in at most nine edge positions from this exact seed.

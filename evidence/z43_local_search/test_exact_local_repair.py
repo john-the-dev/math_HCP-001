@@ -55,7 +55,7 @@ class ExactLocalRepairTest(unittest.TestCase):
         logs = Path(__file__).with_name("verification_logs")
         self.assertEqual(
             [path.name for path in sorted(logs.glob("*.log"))],
-            [f"r{radius}.drat-trim.log" for radius in range(1, 9)],
+            [f"r{radius}.drat-trim.log" for radius in range(1, 10)],
         )
         for path in logs.glob("*.log"):
             self.assertIn("\ns VERIFIED\n", path.read_text())
