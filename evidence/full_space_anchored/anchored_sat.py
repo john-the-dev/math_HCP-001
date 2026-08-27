@@ -137,6 +137,22 @@ def block_pair_common_clauses(degree, pool):
     return clauses
 
 
+def cross_block_pair_common_clauses(degree, pool):
+    """Encode opposite-block portions of two within-block pair bounds."""
+    clauses = []
+    block_a = list(range(degree))
+    block_b = list(range(degree, N))
+    for u, v in combinations(block_a, 2):
+        clauses.extend(_conditional_conjunction_atmost(
+            ((edge_var(u, w), edge_var(v, w)) for w in block_b),
+            8, edge_var(u, v), pool))
+    for u, v in combinations(block_b, 2):
+        clauses.extend(_conditional_conjunction_atmost(
+            ((-edge_var(u, w), -edge_var(v, w)) for w in block_a),
+            8, -edge_var(u, v), pool))
+    return clauses
+
+
 def global_pair_common_clauses(pool):
     """Encode whole-H common-set bounds; requires global K5/I5 clauses."""
     clauses = []
@@ -241,6 +257,7 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
                  enforce_block_pair_common_bounds=True,
                  b_internal_degree=None,
                  enforce_global_pair_common_bounds=True,
+                 enforce_cross_block_pair_common_bounds=True,
                  a_total_degree=None,
                  enforce_distinguished_cross_triple_bounds=True,
                  enforce_residual_block_degree_bounds=True):
@@ -294,6 +311,9 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
 
     if enforce_global_pair_common_bounds:
         clauses.extend(global_pair_common_clauses(pool))
+
+    if enforce_cross_block_pair_common_bounds:
+        clauses.extend(cross_block_pair_common_clauses(degree, pool))
 
     for u in range(N):
         incident = [edge_var(u, v) for v in range(N) if v != u]
@@ -459,6 +479,30 @@ def verify_global_pair_common_bounds(adjacency):
     return maxima
 
 
+def verify_cross_block_pair_common_bounds(adjacency, degree):
+    maxima = {"a_edge_common_neighbors_in_b": 0,
+              "b_nonedge_common_nonneighbors_in_a": 0}
+    block_a = list(range(degree))
+    block_b = list(range(degree, N))
+    for u, v in combinations(block_a, 2):
+        if (adjacency[u] >> v) & 1:
+            count = sum((adjacency[u] >> w) & 1
+                        and (adjacency[v] >> w) & 1 for w in block_b)
+            require(count <= 8,
+                    "A-edge cross-block common-neighbor bound violated")
+            maxima["a_edge_common_neighbors_in_b"] = max(
+                maxima["a_edge_common_neighbors_in_b"], count)
+    for u, v in combinations(block_b, 2):
+        if not ((adjacency[u] >> v) & 1):
+            count = sum(not ((adjacency[u] >> w) & 1)
+                        and not ((adjacency[v] >> w) & 1) for w in block_a)
+            require(count <= 8,
+                    "B-nonedge cross-block common-nonneighbor bound violated")
+            maxima["b_nonedge_common_nonneighbors_in_a"] = max(
+                maxima["b_nonedge_common_nonneighbors_in_a"], count)
+    return maxima
+
+
 def verify_distinguished_cross_triple_bounds(
         adjacency, degree, a_internal_degree, b_internal_degree):
     maxima = {"distinguished_a_cross_common_neighbors": 0,
@@ -569,6 +613,7 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
                  enforce_block_pair_common_bounds=True,
                  b_internal_degree=None,
                  enforce_global_pair_common_bounds=True,
+                 enforce_cross_block_pair_common_bounds=True,
                  a_total_degree=None,
                  enforce_distinguished_cross_triple_bounds=True,
                  enforce_residual_block_degree_bounds=True):
@@ -604,6 +649,9 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
                    if enforce_block_pair_common_bounds else None)
     global_pair_common = (verify_global_pair_common_bounds(adjacency)
                           if enforce_global_pair_common_bounds else None)
+    cross_block_pair_common = (
+        verify_cross_block_pair_common_bounds(adjacency, degree)
+        if enforce_cross_block_pair_common_bounds else None)
 
     degrees = [row.bit_count() for row in adjacency]
     for u, value in enumerate(degrees):
@@ -655,6 +703,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
         result.update(pair_common)
     if global_pair_common is not None:
         result.update(global_pair_common)
+    if cross_block_pair_common is not None:
+        result.update(cross_block_pair_common)
     if distinguished_triples is not None:
         result.update(distinguished_triples)
     if residual_degrees is not None:
@@ -694,6 +744,8 @@ def solve(args):
         b_internal_degree=args.b_internal_degree,
         enforce_global_pair_common_bounds=(
             not args.no_global_pair_common_bounds),
+        enforce_cross_block_pair_common_bounds=(
+            not args.no_cross_block_pair_common_bounds),
         a_total_degree=args.a_total_degree,
         enforce_distinguished_cross_triple_bounds=(
             distinguished_cross_triple_active),
@@ -718,6 +770,8 @@ def solve(args):
           f"{'disabled' if args.no_block_pair_common_bounds else 'enabled'}")
     print("global_pair_common_bounds="
           f"{'disabled' if args.no_global_pair_common_bounds else 'enabled'}")
+    print("cross_block_pair_common_bounds="
+          f"{'disabled' if args.no_cross_block_pair_common_bounds else 'enabled'}")
     print("distinguished_cross_triple_bounds="
           + configured_bound_state(
               args.no_distinguished_cross_triple_bounds,
@@ -748,6 +802,8 @@ def solve(args):
             "block_degree_bounds": not args.no_block_degree_bounds,
             "block_pair_common_bounds": not args.no_block_pair_common_bounds,
             "global_pair_common_bounds": not args.no_global_pair_common_bounds,
+            "cross_block_pair_common_bounds": (
+                not args.no_cross_block_pair_common_bounds),
             "distinguished_cross_triple_bounds": (
                 distinguished_cross_triple_active),
             "residual_block_degree_bounds": (
@@ -776,6 +832,8 @@ def solve(args):
                 b_internal_degree=args.b_internal_degree,
                 enforce_global_pair_common_bounds=(
                     not args.no_global_pair_common_bounds),
+                enforce_cross_block_pair_common_bounds=(
+                    not args.no_cross_block_pair_common_bounds),
                 a_total_degree=args.a_total_degree,
                 enforce_distinguished_cross_triple_bounds=(
                     distinguished_cross_triple_active),
@@ -917,6 +975,9 @@ def main():
     parser.add_argument(
         "--no-global-pair-common-bounds", action="store_true",
         help="disable sound whole-H pair common-set bounds for diagnostics")
+    parser.add_argument(
+        "--no-cross-block-pair-common-bounds", action="store_true",
+        help="disable sound opposite-block pair common-set bounds for diagnostics")
     parser.add_argument(
         "--no-distinguished-cross-triple-bounds", action="store_true",
         help="disable distinguished cross-block triple bounds for diagnostics")

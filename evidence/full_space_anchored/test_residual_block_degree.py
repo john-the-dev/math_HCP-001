@@ -190,6 +190,7 @@ class ResidualBlockDegreeTests(unittest.TestCase):
                         no_block_degree_bounds=False,
                         no_block_pair_common_bounds=False,
                         no_global_pair_common_bounds=False,
+                        no_cross_block_pair_common_bounds=False,
                         no_distinguished_cross_triple_bounds=cross_off,
                         no_residual_block_degree_bounds=residual_off,
                         solver="glucose4", cnf=None, proof=None,
@@ -214,7 +215,11 @@ class ResidualBlockDegreeTests(unittest.TestCase):
                                   else "not-applicable")
                 self.assertIn(f"residual_block_degree_bounds={residual_state}",
                               output.getvalue())
+                self.assertIn("cross_block_pair_common_bounds=enabled",
+                              output.getvalue())
                 for call in core_calls + verify_calls:
+                    self.assertTrue(
+                        call["enforce_cross_block_pair_common_bounds"])
                     self.assertEqual(
                         call["enforce_distinguished_cross_triple_bounds"],
                         cross_active)
@@ -225,6 +230,7 @@ class ResidualBlockDegreeTests(unittest.TestCase):
                                  cross_active)
                 self.assertEqual(record["residual_block_degree_bounds"],
                                  residual_active)
+                self.assertTrue(record["cross_block_pair_common_bounds"])
 
 
 if __name__ == "__main__":

@@ -355,6 +355,31 @@ and distinguished-triple cuts changed `d20-j2-k8` from 1,624,223 clauses /
 1,630,687 / 766,233. These deterministic core counts exclude the 1,701,336
 global five-set clauses and make no solver-result claim.
 
+### Cross-block portions of pair bounds
+
+Two within-block pair types admit an additional bound on their common set in
+the opposite block. If `u,v` are adjacent vertices of `A`, their common
+neighbors in `B` contain neither a triangle (which would complete a K5 with
+`u,v`) nor an independent 4-set (forbidden in `B`). Hence `R(3,4)=9` bounds
+that set by eight. Dually, if `u,v` are nonadjacent vertices of `B`, their
+common nonneighbors in `A` contain neither an independent triple (which would
+complete an I5 with `u,v`) nor a K4 (forbidden in `A`), so `R(4,3)=9` again
+gives eight.
+
+Only these two polarities receive the cut. A `B` edge with common neighbors
+in `A`, or an `A` nonedge with common nonneighbors in `B`, has only the
+whole-`H` bound 13; applying eight there would be unsound. The cuts use guarded
+sequential counters, are enabled for every `d`, and add no `j`, `k`, `t`, or
+edge-count partition axis. `--no-cross-block-pair-common-bounds` is a
+diagnostic opt-out. Their derivation depends on the A-K4/B-I4 clauses and the
+global K5/I5 clauses, so a core-only verdict remains invalid.
+
+The deterministic additions are 93,744 clauses / 50,304 variables at `d=18`,
+96,264 / 51,524 at `d=19`, and 97,776 / 52,256 at `d=20`. On the integration
+host, the fully distinguished `d20-j2-t19-k8` core changes from 1,628,851
+clauses / 765,208 variables to 1,726,627 / 817,464. These counts exclude the
+1,701,336 global five-set clauses and are not solver results.
+
 ### Exact A-block edge partitions
 
 `--a-edges` fixes `E(A)` while leaving the total edge count unfixed. It is

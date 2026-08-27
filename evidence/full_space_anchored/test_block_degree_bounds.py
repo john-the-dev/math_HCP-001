@@ -94,7 +94,8 @@ class BlockDegreeBoundsTests(unittest.TestCase):
         clauses, top = SAT.core_clauses(
             20, None, 2, a_edge_count=68,
             enforce_block_pair_common_bounds=False,
-            enforce_global_pair_common_bounds=False)
+            enforce_global_pair_common_bounds=False,
+            enforce_cross_block_pair_common_bounds=False)
         self.assertEqual((len(clauses), top), (730802, 360785))
 
 
