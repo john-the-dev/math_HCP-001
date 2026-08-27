@@ -12,6 +12,7 @@ For each `d`, the CNF searches all 861 edges of `H` and enforces:
 
 - no K5 or independent 5-set in `H`;
 - no K4 in `A` and no independent 4-set in `B`;
+- the exact known edge ranges for the induced `R(4,5,n)` blocks;
 - `deg_H(a) in [d-1,23]` and `deg_H(b) in [d,24]`;
 - at most `451-d` edges;
 - nondecreasing full `H`-degrees independently inside `A` and `B`.
@@ -20,6 +21,22 @@ The last constraint is sound under `Sym(A) x Sym(B)`: the shared edge of two
 compared vertices cancels, and every orbit has a degree-sorted representative.
 The conditions are sufficient because a forbidden 5-set either lies in `H` or
 contains `v`, in which case it yields a forbidden K4 in `A` or I4 in `B`.
+
+Appendix Table 1 of Angeltveit and McKay,
+[R(5,5) <= 46](https://arxiv.org/abs/2409.15709v2), gives the edge ranges
+for `R(4,5,n)` graphs. Thus `G[A]` has respectively `50..85`, `57..92`,
+or `68..100` edges for `d=18,19,20`. The complement of `G[B]` is an
+`R(4,5,42-d)` graph. Subtracting its table range from `C(42-d,2)` gives the
+following default-on bounds for `G[B]`:
+
+| `d` | `|E(G[A])|` | `|E(G[B])|` |
+| --- | --- | --- |
+| 18 | 50..85 | 144..160 |
+| 19 | 57..92 | 131..152 |
+| 20 | 68..100 | 117..143 |
+
+`--no-block-edge-bounds` disables only these redundant constraints for
+diagnostic comparisons. It must not be used for the production proof ledger.
 
 Python 3.10+ and `python-sat` are required. The development environment used
 `python-sat 1.9.dev15`.
@@ -77,6 +94,20 @@ python3 anchored_sat.py --degree 20 --a-internal-degree 2 \
   --solver cadical195 --json d20-j2.json
 python3 verify_manifest.py j_partition_manifest.json
 ```
+
+On the development host, constructing the d20 j-frontier core before adding
+the global 5-set clauses produced these measurements (Python 3.12,
+`python-sat 1.9.dev15`):
+
+| case | block bounds | core clauses | encoded variables | build seconds |
+| --- | --- | ---: | ---: | ---: |
+| d20-j2 | off | 634,614 | 312,247 | 0.149 |
+| d20-j2 | on | 720,934 | 355,465 | 0.222 |
+| d20-j13 | off | 634,614 | 312,247 | 0.212 |
+| d20-j13 | on | 720,934 | 355,465 | 0.276 |
+
+These are formula-construction measurements, not solver benchmarks or UNSAT
+claims.
 
 Every j-only manifest row records the recomputed `edge_min` and `edge_max`
 even though `edges` is null. The manifest describes work to run; it does not

@@ -14,6 +14,14 @@ from pysat.solvers import Solver
 N = 42
 PAIRS = list(combinations(range(N), 2))
 EDGE_VAR = {edge: index + 1 for index, edge in enumerate(PAIRS)}
+R45_EDGE_BOUNDS = {
+    18: (50, 85),
+    19: (57, 92),
+    20: (68, 100),
+    22: (88, 114),
+    23: (101, 122),
+    24: (116, 132),
+}
 
 
 def require(condition, message):
@@ -33,6 +41,35 @@ def a_internal_bounds(degree):
     return max(0, degree - 18), 13
 
 
+def block_edge_bounds(degree):
+    a_minimum, a_maximum = R45_EDGE_BOUNDS[degree]
+    b_size = N - degree
+    complement_minimum, complement_maximum = R45_EDGE_BOUNDS[b_size]
+    b_total = comb(b_size, 2)
+    return ((a_minimum, a_maximum),
+            (b_total - complement_maximum, b_total - complement_minimum))
+
+
+def block_edges(degree):
+    a_edges = [edge_var(u, v) for u, v in combinations(range(degree), 2)]
+    b_edges = [edge_var(u, v)
+               for u, v in combinations(range(degree, N), 2)]
+    return a_edges, b_edges
+
+
+def block_edge_clauses(degree, pool):
+    clauses = []
+    for edges, (minimum, maximum) in zip(
+            block_edges(degree), block_edge_bounds(degree)):
+        clauses.extend(CardEnc.atleast(
+            edges, bound=minimum, vpool=pool,
+            encoding=EncType.seqcounter).clauses)
+        clauses.extend(CardEnc.atmost(
+            edges, bound=maximum, vpool=pool,
+            encoding=EncType.seqcounter).clauses)
+    return clauses
+
+
 def degree_leq_clauses(u, w, pool):
     """Encode deg_H(u) <= deg_H(w); their shared edge cancels."""
     left = [edge_var(u, x) for x in range(N) if x not in (u, w)]
@@ -42,7 +79,8 @@ def degree_leq_clauses(u, w, pool):
         vpool=pool, encoding=EncType.seqcounter).clauses
 
 
-def core_clauses(degree, edge_count=None, a_internal_degree=None):
+def core_clauses(degree, edge_count=None, a_internal_degree=None,
+                 enforce_block_edge_bounds=True):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
@@ -62,6 +100,9 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None):
         clauses.append([-edge_var(u, v) for u, v in combinations(vertices, 2)])
     for vertices in combinations(block_b, 4):
         clauses.append([edge_var(u, v) for u, v in combinations(vertices, 2)])
+
+    if enforce_block_edge_bounds:
+        clauses.extend(block_edge_clauses(degree, pool))
 
     for u in range(N):
         incident = [edge_var(u, v) for v in range(N) if v != u]
@@ -121,7 +162,20 @@ def model_adjacency(model):
     return adjacency
 
 
-def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None):
+def verify_block_edge_bounds(adjacency, degree):
+    counts = []
+    for vertices in (range(degree), range(degree, N)):
+        counts.append(sum((adjacency[u] >> v) & 1
+                          for u, v in combinations(vertices, 2)))
+    for name, count, (minimum, maximum) in zip(
+            ("A", "B"), counts, block_edge_bounds(degree)):
+        require(minimum <= count <= maximum,
+                f"{name}-block edge bound violated")
+    return {"a_edges": counts[0], "b_edges": counts[1]}
+
+
+def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
+                 enforce_block_edge_bounds=True):
     require(len(adjacency) == N, "model must contain 42 adjacency rows")
     for u in range(N):
         require(not (adjacency[u] >> u) & 1, "self edge")
@@ -134,6 +188,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None):
     require(minimum <= actual_edges <= maximum, "edge bound violated")
     if edge_count is not None:
         require(actual_edges == edge_count, "edge partition violated")
+    block_counts = (verify_block_edge_bounds(adjacency, degree)
+                    if enforce_block_edge_bounds else None)
 
     degrees = [row.bit_count() for row in adjacency]
     for u, value in enumerate(degrees):
@@ -167,7 +223,10 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None):
         count = sum((adjacency[u] >> v) & 1
                     for u, v in combinations(vertices, 2))
         require(count not in (0, 10), "forbidden 5-set in H")
-    return {"edges": actual_edges, "degrees": degrees}
+    result = {"edges": actual_edges, "degrees": degrees}
+    if block_counts is not None:
+        result.update(block_counts)
+    return result
 
 
 def write_dimacs(path, clauses, top):
@@ -183,7 +242,8 @@ def write_dimacs(path, clauses, top):
 
 def solve(args):
     clauses, top = core_clauses(
-        args.degree, args.edges, args.a_internal_degree)
+        args.degree, args.edges, args.a_internal_degree,
+        not args.no_block_edge_bounds)
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -192,6 +252,7 @@ def solve(args):
     started = time.perf_counter()
     print(f"degree={args.degree} edge_partition={args.edges} "
           f"a_internal_degree={args.a_internal_degree}")
+    print(f"block_edge_bounds={'disabled' if args.no_block_edge_bounds else 'enabled'}")
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,
@@ -208,6 +269,7 @@ def solve(args):
             "degree": args.degree,
             "edge_partition": args.edges,
             "a_internal_degree": args.a_internal_degree,
+            "block_edge_bounds": not args.no_block_edge_bounds,
             "solver": args.solver,
             "result": result,
             "vars": top,
@@ -218,7 +280,8 @@ def solve(args):
         if sat:
             adjacency = model_adjacency(solver.get_model())
             record["verification"] = verify_model(
-                adjacency, args.degree, args.edges, args.a_internal_degree)
+                adjacency, args.degree, args.edges, args.a_internal_degree,
+                not args.no_block_edge_bounds)
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
@@ -280,6 +343,9 @@ def main():
     parser.add_argument("--degree", type=int, choices=(18, 19, 20))
     parser.add_argument("--edges", type=int)
     parser.add_argument("--a-internal-degree", type=int)
+    parser.add_argument(
+        "--no-block-edge-bounds", action="store_true",
+        help="disable sound R(4,5,n) block-edge bounds for diagnostics")
     parser.add_argument("--solver", default="cadical195")
     parser.add_argument("--cnf")
     parser.add_argument("--proof")
