@@ -29,12 +29,29 @@ def edge_bounds(degree):
     return (41 * degree + 1) // 2, 451 - degree
 
 
-def core_clauses(degree, edge_count=None):
+def a_internal_bounds(degree):
+    return max(0, degree - 18), 13
+
+
+def degree_leq_clauses(u, w, pool):
+    """Encode deg_H(u) <= deg_H(w); their shared edge cancels."""
+    left = [edge_var(u, x) for x in range(N) if x not in (u, w)]
+    right = [edge_var(w, x) for x in range(N) if x not in (u, w)]
+    return CardEnc.atmost(
+        left + [-var for var in right], bound=N - 2,
+        vpool=pool, encoding=EncType.seqcounter).clauses
+
+
+def core_clauses(degree, edge_count=None, a_internal_degree=None):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
         require(minimum <= edge_count <= maximum,
                 f"edge count must be in {minimum}..{maximum}")
+    if a_internal_degree is not None:
+        lower_j, upper_j = a_internal_bounds(degree)
+        require(lower_j <= a_internal_degree <= upper_j,
+                f"A-internal degree must be in {lower_j}..{upper_j}")
 
     pool = IDPool(start_from=len(PAIRS) + 1)
     clauses = []
@@ -55,14 +72,27 @@ def core_clauses(degree, edge_count=None):
         clauses.extend(CardEnc.atmost(
             incident, bound=upper, vpool=pool, encoding=EncType.seqcounter).clauses)
 
-    # The shared edge cancels, so this cardinality constraint compares full degrees.
-    for block in (list(block_a), list(block_b)):
+    if a_internal_degree is None:
+        symmetry_blocks = (list(block_a), list(block_b))
+    else:
+        j = a_internal_degree
+        for vertex in range(1, degree):
+            clauses.append([edge_var(0, vertex) if vertex <= j
+                            else -edge_var(0, vertex)])
+
+        # Choose vertex 0 to have minimum degree in A, then sort only within
+        # the residual symmetry blocks preserved by its fixed neighborhood.
+        for vertex in range(1, degree):
+            clauses.extend(degree_leq_clauses(0, vertex, pool))
+        symmetry_blocks = (
+            list(range(1, j + 1)),
+            list(range(j + 1, degree)),
+            list(block_b),
+        )
+
+    for block in symmetry_blocks:
         for u, w in zip(block, block[1:]):
-            left = [edge_var(u, x) for x in range(N) if x not in (u, w)]
-            right = [edge_var(w, x) for x in range(N) if x not in (u, w)]
-            clauses.extend(CardEnc.atmost(
-                left + [-var for var in right], bound=N - 2,
-                vpool=pool, encoding=EncType.seqcounter).clauses)
+            clauses.extend(degree_leq_clauses(u, w, pool))
 
     edges = list(EDGE_VAR.values())
     if edge_count is None:
@@ -91,7 +121,7 @@ def model_adjacency(model):
     return adjacency
 
 
-def verify_model(adjacency, degree, edge_count=None):
+def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None):
     require(len(adjacency) == N, "model must contain 42 adjacency rows")
     for u in range(N):
         require(not (adjacency[u] >> u) & 1, "self edge")
@@ -110,7 +140,21 @@ def verify_model(adjacency, degree, edge_count=None):
         lower = degree - 1 if u < degree else degree
         upper = 23 if u < degree else 24
         require(lower <= value <= upper, "degree bound violated")
-    require(degrees[:degree] == sorted(degrees[:degree]), "A degrees unsorted")
+    if a_internal_degree is None:
+        require(degrees[:degree] == sorted(degrees[:degree]), "A degrees unsorted")
+    else:
+        j = a_internal_degree
+        require(sum((adjacency[0] >> vertex) & 1
+                    for vertex in range(1, degree)) == j,
+                "distinguished A-internal degree violated")
+        for vertex in range(1, degree):
+            require(bool((adjacency[0] >> vertex) & 1) == (vertex <= j),
+                    "fixed distinguished neighborhood violated")
+        require(all(degrees[0] <= degrees[vertex]
+                    for vertex in range(1, degree)),
+                "distinguished vertex is not minimum-degree in A")
+        for block in (degrees[1:j + 1], degrees[j + 1:degree]):
+            require(block == sorted(block), "residual A block is unsorted")
     require(degrees[degree:] == sorted(degrees[degree:]), "B degrees unsorted")
 
     for vertices in combinations(range(degree), 4):
@@ -138,14 +182,16 @@ def write_dimacs(path, clauses, top):
 
 
 def solve(args):
-    clauses, top = core_clauses(args.degree, args.edges)
+    clauses, top = core_clauses(
+        args.degree, args.edges, args.a_internal_degree)
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
         require(written == expected_clauses, "DIMACS clause-count mismatch")
 
     started = time.perf_counter()
-    print(f"degree={args.degree} edge_partition={args.edges}")
+    print(f"degree={args.degree} edge_partition={args.edges} "
+          f"a_internal_degree={args.a_internal_degree}")
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,
@@ -161,6 +207,7 @@ def solve(args):
         record = {
             "degree": args.degree,
             "edge_partition": args.edges,
+            "a_internal_degree": args.a_internal_degree,
             "solver": args.solver,
             "result": result,
             "vars": top,
@@ -170,7 +217,8 @@ def solve(args):
         }
         if sat:
             adjacency = model_adjacency(solver.get_model())
-            record["verification"] = verify_model(adjacency, args.degree, args.edges)
+            record["verification"] = verify_model(
+                adjacency, args.degree, args.edges, args.a_internal_degree)
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
@@ -182,16 +230,52 @@ def solve(args):
         print(json.dumps(record, sort_keys=True))
 
 
+def write_manifest(path):
+    partitions = []
+    for degree in (18, 19, 20):
+        minimum, maximum = edge_bounds(degree)
+        minimum_j, maximum_j = a_internal_bounds(degree)
+        for edge_count in range(minimum, maximum + 1):
+            for j in range(minimum_j, maximum_j + 1):
+                key = f"d{degree}-e{edge_count}-j{j}"
+                partitions.append({
+                    "id": key,
+                    "degree": degree,
+                    "edges": edge_count,
+                    "a_internal_degree": j,
+                    "cnf": f"{key}.cnf",
+                    "proof": f"{key}.drat",
+                    "result": f"{key}.json",
+                })
+    manifest = {
+        "schema": 1,
+        "vertex_count": 43,
+        "coverage": (
+            "d in {18,19,20}; every admissible H edge count; j is the "
+            "A-internal degree of a chosen minimum-degree vertex of A"
+        ),
+        "partition_count": len(partitions),
+        "partitions": partitions,
+    }
+    Path(path).write_text(json.dumps(manifest, indent=2) + "\n")
+    print(f"wrote {len(partitions)} partitions to {path}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--degree", type=int, choices=(18, 19, 20))
     parser.add_argument("--edges", type=int)
+    parser.add_argument("--a-internal-degree", type=int)
     parser.add_argument("--solver", default="cadical195")
     parser.add_argument("--cnf")
     parser.add_argument("--proof")
     parser.add_argument("--json")
     parser.add_argument("--list-partitions", action="store_true")
+    parser.add_argument("--write-manifest")
     args = parser.parse_args()
+    if args.write_manifest:
+        write_manifest(args.write_manifest)
+        return
     if args.list_partitions:
         for degree in (18, 19, 20):
             minimum, maximum = edge_bounds(degree)

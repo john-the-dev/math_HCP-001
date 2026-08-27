@@ -49,3 +49,33 @@ An UNSAT solver verdict is discovery-only until the proof checker accepts the
 corresponding formula/proof pair. Exact edge partitions cover `410..431` for
 `d=20`, `390..432` for `d=19`, and `369..433` for `d=18`; these lower bounds
 follow by summing the per-vertex degree lower bounds.
+
+## Distinguished-A-vertex refinement
+
+Each edge-count partition can be divided further with
+`--a-internal-degree j`. Choose a minimum-degree vertex of `A`, relabel it as
+vertex 0, and relabel its `j` neighbors in `A` as vertices `1..j`. The formula
+fixes those incident edges, requires `deg_H(0) <= deg_H(a)` for every other
+`a in A`, and sorts degrees only within the three residual symmetry blocks:
+the fixed neighbors, fixed nonneighbors, and `B`. This is sound because every
+graph has a minimum-degree vertex in `A`, and the relabeling uses only
+`Sym(A) x Sym(B)`.
+
+The exact Ramsey values `R(3,5)=14` and `R(4,4)=18` restrict `j`: the
+neighbors of vertex 0 inside `A` avoid K3/I5, while its nonneighbors inside
+`A` avoid K4/I4. Thus `max(0,d-18) <= j <= 13`.
+
+Generate the exhaustive `(d, edge_count, j)` manifest (1,733 partitions):
+
+```sh
+python3 anchored_sat.py --write-manifest partition_manifest.json
+```
+
+Run and independently certify a refined partition:
+
+```sh
+python3 anchored_sat.py --degree 20 --edges 410 --a-internal-degree 7 \
+  --solver glucose4 --cnf d20-e410-j7.cnf --proof d20-e410-j7.drat \
+  --json d20-e410-j7.json
+drat-trim d20-e410-j7.cnf d20-e410-j7.drat
+```
