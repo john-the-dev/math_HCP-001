@@ -37,6 +37,8 @@ for radius in 11 12; do
   ./run_exact_local_repair.sh "$radius" /tmp/z43-local \
     "$(command -v cadical)" /path/to/drat-trim binary 3600
 done
+./run_exact_local_repair.sh 13 /tmp/z43-local \
+  "$(command -v cadical)" /path/to/drat-trim binary 7200
 python3 verify_exact_local_evidence.py
 ```
 
@@ -48,15 +50,15 @@ decode` and audit the graph with the pre-existing independent
 
 ## Results
 
-The bounded experiment now reaches radius 12. Radius 12 logically subsumes
-radii 1--11: these are one nested exclusion checked at twelve bounds, not twelve
-independent assurances. The result rests on the radius-12 proof together with
-direct audit of the shared encoding; the smaller bounds are reproducibility
-and scaling checkpoints only.
+The bounded experiment now reaches radius 13. Radius 13 logically subsumes
+radii 1--12: these are one nested exclusion checked at thirteen bounds, not
+thirteen independent assurances. The result rests on the radius-13 proof
+together with direct audit of the shared encoding; the smaller bounds are
+reproducibility and scaling checkpoints only.
 All solver times below are real seconds reported by CaDiCaL. Hashes bind both
 the generated CNF and the exact proof instance checked in this run; large
 transient artifacts were not committed. Radii 1--4 used ASCII DRAT and radii
-5--12 used binary DRAT. CaDiCaL proof traces are not canonical: proof format,
+5--13 used binary DRAT. CaDiCaL proof traces are not canonical: proof format,
 solver version/options, and some execution details can change proof bytes while
 leaving the deterministic CNF unchanged. Reproduction therefore requires
 rechecking the newly generated proof rather than expecting its hash to equal a
@@ -81,6 +83,7 @@ proofs or checker logs, even when their proof checks succeed.
 | 10 | binary | 9,933 | 1,944,049 | 564.31 | `7eac77809d7b935f944fb1b702070cdc7ee6039a5f55674f955f275c2c5c3f12` | `0d49d765d26559f30520e76f8145e1f13413a2a5518ab3ada000152392ad8233` |
 | 11 | binary | 10,836 | 1,945,833 | 983.18 | `f09d495e146114216ee8a5c4b8c9c2bdf87aeaeb56c1eefa8a0ba640a96573a0` | `6548f728b94f971768435a4a680af3cda3d79f6e7d4ffaa93f05dad242a3508f` |
 | 12 | binary | 11,739 | 1,947,615 | 1,469.90 | `87d6117bf54b2941e394383aab84a2debd62325209f8aab50409acf06ded8a97` | `d499241517602d296b760543477853f1329eb23cd064eff000a0f1beb888a7f9` |
+| 13 | binary | 12,642 | 1,949,395 | 1,994.31 | `57d5d8a4d8b6e6e43c7f660a9ad565263565c3bc27f59cc6ed9f03e9c7e315db` | `9b9ca606086d89cc642c4057bfb8fe141e89f2163cc6f950eb501eff71c1ba72` |
 
 The checker exited 0 at every radius. Raw output hashes bind the exact terminal
 streams; readable transcripts under `verification_logs/` remove terminal
@@ -102,11 +105,12 @@ lines. Each transcript reports `s VERIFIED`.
 | 10 | 0 | `4b25a08a03013fe413e7e977feeca579b2d9e7b2243e85f89bd57d8592f8026d` |
 | 11 | 0 | `c8a85e416e1a335dae4a3097a3580c5f84ab1c42fe3cda1b15aaa54685a2a0a9` |
 | 12 | 0 | `9f280f44167b99a00d47b946de183ba7f6bd4e78d0bd7788ee0a07e3332898e8` |
+| 13 | 0 | `f6f87e3e7da15e8e9d565d1b76d9112a8010d15e296ff7e0c2e2308fc9fac26e` |
 
 The exact conclusion is: no `(5,5)`-avoiding graph on labeled vertices
-`0..42` differs in at most twelve edge positions from this exact seed.
+`0..42` differs in at most thirteen edge positions from this exact seed.
 
-## Radius-11 and radius-12 run history
+## Radius-11 through radius-13 run history
 
 A first radius-11 attempt generated the deterministic 10,836-variable,
 1,945,833-clause CNF recorded in the table above.
@@ -130,3 +134,10 @@ seconds and wrote a 1,631,318,478-byte binary proof. The pinned checker exited
 395,601,802 resolution steps and zero RAT lemmas. This checked radius-12 proof,
 rather than either exact-shell timeout attempt, supports the current
 fixed-label conclusion.
+
+The direct radius-13 continuation generated a deterministic 12,642-variable,
+1,949,395-clause CNF. CaDiCaL returned UNSAT after 1,994.31 real seconds and
+wrote a 2,712,997,050-byte binary proof. The pinned checker exited 0 with exact
+`s VERIFIED` after 764.368 seconds; its backward check used 671,936,876
+resolution steps and zero RAT lemmas. This checked direct proof establishes
+the fixed-label radius-13 conclusion without relying on an exact-shell result.
