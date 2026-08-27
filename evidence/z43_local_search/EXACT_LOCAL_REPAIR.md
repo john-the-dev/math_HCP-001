@@ -25,9 +25,16 @@ CaDiCaL 3.0.1 generated the DRAT proofs. Every proof was checked externally by
 
 ```sh
 python3 "$(git rev-parse --show-toplevel)/evidence/z43_local_search/test_exact_local_repair.py"
-./run_exact_local_repair.sh 8 /tmp/z43-local \
-  "$(command -v cadical)" /path/to/drat-trim binary
-python3 verify_exact_local_evidence.py --artifact-prefix /tmp/z43-local
+for radius in 1 2 3 4; do
+  ./run_exact_local_repair.sh "$radius" /tmp/z43-local \
+    "$(command -v cadical)" /path/to/drat-trim ascii
+done
+for radius in 5 6 7 8 9; do
+  ./run_exact_local_repair.sh "$radius" /tmp/z43-local \
+    "$(command -v cadical)" /path/to/drat-trim binary
+done
+python3 verify_exact_local_evidence.py \
+  --artifact-prefix /tmp/z43-local/z43-local
 ```
 
 The runner treats only CaDiCaL status 20 followed by `drat-trim`'s exact
@@ -46,7 +53,7 @@ and scaling checkpoints only.
 All solver times below are real seconds reported by CaDiCaL. Hashes bind both
 the generated CNF and the exact proof instance checked in this run; large
 transient artifacts were not committed. Radii 1--4 used ASCII DRAT and radii
-5--8 used binary DRAT. CaDiCaL proof traces are not canonical: proof format,
+5--9 used binary DRAT. CaDiCaL proof traces are not canonical: proof format,
 solver version/options, and some execution details can change proof bytes while
 leaving the deterministic CNF unchanged. Reproduction therefore requires
 rechecking the newly generated proof rather than expecting its hash to equal a
