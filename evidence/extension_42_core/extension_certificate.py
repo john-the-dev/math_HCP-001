@@ -12,6 +12,17 @@ S = {1, 2, 7, 10, 12, 13, 14, 16, 18, 20, 21}
 DIFFS = S | {(-d) % N for d in S}
 DELETED = {3, 4, 5, 6, 11, 12, 13, 14, 20, 21, 22, 23,
            29, 30, 31, 37, 38, 39, 40}
+SOURCE_COMMIT = "5c1b2c2898271cd7fdc882fb6dce0518debdcc40"
+EXPECTED_I5 = {(3, 6, 7, 11, 12), (6, 7, 11, 12, 15)}
+EXPECTED_COUNTS = {
+    6: (1133, 1185), 12: (1133, 1185),
+    7: (1131, 1200), 11: (1131, 1200),
+}
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
 
 
 def build_candidate():
@@ -40,6 +51,21 @@ def clauses_for(removed):
             clauses.append({"kind": "I4", "vertices": list(q),
                             "positive": list(q), "negative": []})
     return clauses
+
+
+def validate_model():
+    adj = build_candidate()
+    edges = sum((adj[u] >> v) & 1 for u, v in combinations(range(N), 2))
+    require(edges == 454, f"candidate edge count {edges} != 454")
+    k5, i5 = [], []
+    for q in combinations(range(N), 5):
+        count = sum((adj[u] >> v) & 1 for u, v in combinations(q, 2))
+        if count == 10:
+            k5.append(q)
+        elif count == 0:
+            i5.append(q)
+    require(not k5, f"candidate unexpectedly has K5 {k5[:1]}")
+    require(set(i5) == EXPECTED_I5, f"candidate I5 set differs: {i5}")
 
 
 def status(clause, assignment):
@@ -79,7 +105,7 @@ def prove(clauses, assignment=None):
         return {"unit": [var, value], "reason": ci,
                 "next": prove(clauses, assignment)}
     if not scores:
-        raise AssertionError("formula unexpectedly satisfiable")
+        raise ValueError("formula unexpectedly satisfiable")
     var = max(scores, key=scores.get)
     left = dict(assignment); left[var] = False
     right = dict(assignment); right[var] = True
@@ -91,18 +117,22 @@ def prove(clauses, assignment=None):
 def check_node(clauses, node, assignment=None):
     assignment = dict(assignment or {})
     if "conflict" in node:
-        assert status(clauses[node["conflict"]], assignment)[0] == "conflict"
+        require(status(clauses[node["conflict"]], assignment)[0] == "conflict",
+                "cited conflict clause is not falsified")
         return
     if "unit" in node:
         var, value = node["unit"]
         state, detail = status(clauses[node["reason"]], assignment)
-        assert state == "unit" and detail == (var, value)
-        assert var not in assignment
+        require(state == "unit" and detail == (var, value),
+                "cited unit reason does not force the asserted literal")
+        require(var not in assignment, "unit reassigns an assigned variable")
         assignment[var] = value
         check_node(clauses, node["next"], assignment)
         return
     var = node["branch"]
-    assert var not in assignment
+    require(var not in assignment, "branch variable is already assigned")
+    require("false" in node and "true" in node,
+            "branch must contain both Boolean subtrees")
     left = dict(assignment); left[var] = False
     right = dict(assignment); right[var] = True
     check_node(clauses, node["false"], left)
@@ -118,10 +148,15 @@ def count_nodes(node):
 
 
 def emit(path):
-    payload = {"source_commit": "5c1b2c2898271cd7fdc882fb6dce0518debdcc40",
+    validate_model()
+    payload = {"source_commit": SOURCE_COMMIT,
                "cases": []}
-    for removed in (6, 7):
+    for removed in sorted(EXPECTED_COUNTS):
         clauses = clauses_for(removed)
+        kinds = tuple(sum(c["kind"] == kind for c in clauses)
+                      for kind in ("K4", "I4"))
+        require(kinds == EXPECTED_COUNTS[removed],
+                f"remove={removed} clause counts {kinds} differ")
         proof = prove(clauses)
         check_node(clauses, proof)
         payload["cases"].append({"removed": removed,
@@ -137,13 +172,26 @@ def emit(path):
 
 
 def check(path):
+    validate_model()
     payload = json.loads(path.read_text())
-    for case in payload["cases"]:
+    require(payload.get("source_commit") == SOURCE_COMMIT,
+            "certificate source commit differs")
+    cases = payload.get("cases")
+    require(isinstance(cases, list) and len(cases) == len(EXPECTED_COUNTS),
+            "certificate must contain exactly four cases")
+    require({case.get("removed") for case in cases} == set(EXPECTED_COUNTS),
+            "certificate cases must be exactly removals 6, 7, 11, and 12")
+    for case in cases:
         clauses = clauses_for(case["removed"])
-        assert clauses == case["clauses"]
-        assert len(clauses) == case["clause_count"]
+        kinds = tuple(sum(c["kind"] == kind for c in clauses)
+                      for kind in ("K4", "I4"))
+        require(kinds == EXPECTED_COUNTS[case["removed"]],
+                f"remove={case['removed']} model clause counts differ")
+        require(clauses == case["clauses"], "stored clauses differ from model")
+        require(len(clauses) == case["clause_count"], "clause count differs")
         check_node(clauses, case["proof"])
-        assert count_nodes(case["proof"]) == case["proof_nodes"]
+        require(count_nodes(case["proof"]) == case["proof_nodes"],
+                "proof node count differs")
         print(f"PASS remove={case['removed']} clauses={len(clauses)} proof_nodes={case['proof_nodes']}")
     print(f"sha256={hashlib.sha256(path.read_bytes()).hexdigest()}")
 
