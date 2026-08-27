@@ -48,7 +48,8 @@ class ExactLocalRepairTest(unittest.TestCase):
     def test_exact_counter_truth_table(self):
         for size in range(1, 5):
             for bound in range(-1, size + 2):
-                inputs = list(range(1, size + 1))
+                inputs = [i if i % 2 else -i
+                          for i in range(1, size + 1)]
                 first_aux = size + 1
                 clauses = list(repair.exactly_clauses(
                     inputs, bound, first_aux))
@@ -66,18 +67,34 @@ class ExactLocalRepairTest(unittest.TestCase):
                             extendable = True
                             break
                     self.assertEqual(
-                        extendable, sum(bits) == bound,
+                        extendable,
+                        sum(value == (literal > 0)
+                            for value, literal in zip(bits, inputs)) == bound,
                         (size, bound, bits))
 
     def test_exact_eleven_extends_at_most_counter(self):
-        flips = list(range(1, 904))
+        flips = [
+            -i if repair.seed_value(edge) else i
+            for i, edge in enumerate(repair.all_edges(), start=1)
+        ]
         at_most = list(repair.at_most_clauses(flips, 11, 904))
         exact = list(repair.exactly_clauses(flips, 11, 904))
         self.assertEqual(len(at_most), 20637)
         self.assertEqual(exact[:len(at_most)], at_most)
         self.assertEqual(len(exact) - len(at_most), 18854)
+        self.assertEqual(max(abs(literal)
+                             for clause in exact for literal in clause),
+                         10836)
         self.assertEqual(2 * repair.math.comb(repair.N, 5) + len(exact),
                          1964687)
+
+    def test_invalid_programmatic_distance_mode_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "invalid distance mode"):
+            next(repair.local_model(11, "typo"))
+        with tempfile.TemporaryDirectory() as raw_temp:
+            with self.assertRaisesRegex(ValueError, "invalid distance mode"):
+                repair.write_cnf(
+                    Path(raw_temp) / "bad.cnf", 11, None, "typo")
 
     def test_decoder_rejects_wrong_expected_distance_before_writing(self):
         values = [

@@ -14,6 +14,7 @@ SEED_STEPS = frozenset((1, 2, 7, 10, 12, 13, 14, 16, 18, 20, 21))
 DELETED_CYCLE_EDGES = frozenset(
     (3, 4, 5, 6, 11, 12, 13, 14, 20, 21, 22, 23, 29, 30, 31, 37, 38, 39, 40)
 )
+DISTANCE_MODES = ("at-most", "exact")
 
 
 def all_edges(n: int = N) -> list[tuple[int, int]]:
@@ -119,7 +120,14 @@ def exactly_clauses(literals: list[int], bound: int, first_aux: int):
     yield [counter_variable(first_aux, bound, len(literals), bound)]
 
 
+def distance_counter(distance_mode: str):
+    if distance_mode not in DISTANCE_MODES:
+        raise ValueError(f"invalid distance mode: {distance_mode}")
+    return exactly_clauses if distance_mode == "exact" else at_most_clauses
+
+
 def local_model(radius: int, distance_mode: str = "at-most"):
+    counter = distance_counter(distance_mode)
     edges = all_edges()
     edge_var = {edge: i + 1 for i, edge in enumerate(edges)}
     for vertices in itertools.combinations(range(N), 5):
@@ -127,7 +135,6 @@ def local_model(radius: int, distance_mode: str = "at-most"):
         yield [-variable for variable in variables]
         yield variables
     flips = [(-edge_var[edge] if seed_value(edge) else edge_var[edge]) for edge in edges]
-    counter = exactly_clauses if distance_mode == "exact" else at_most_clauses
     yield from counter(flips, radius, len(edges) + 1)
 
 
@@ -138,7 +145,7 @@ def write_cnf(path: Path, radius: int, metadata_path: Path | None,
         (-i if seed_value(edge) else i)
         for i, edge in enumerate(all_edges(), start=1)
     ]
-    counter = exactly_clauses if distance_mode == "exact" else at_most_clauses
+    counter = distance_counter(distance_mode)
     clauses = 2 * math.comb(N, 5) + sum(
         1 for _ in counter(flips, radius, edge_variables + 1))
     auxiliary_variables = edge_variables * radius if 0 < radius < edge_variables else 0
@@ -212,7 +219,7 @@ def main() -> None:
     build.add_argument("--radius", required=True, type=int)
     build.add_argument("--output", required=True, type=Path)
     build.add_argument("--metadata", type=Path)
-    build.add_argument("--distance-mode", choices=("at-most", "exact"),
+    build.add_argument("--distance-mode", choices=DISTANCE_MODES,
                        default="at-most")
     decode = subparsers.add_parser("decode")
     decode.add_argument("--model", required=True, type=Path)

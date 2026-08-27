@@ -165,7 +165,8 @@ unsound because the original auxiliary variables may otherwise float true.
 For distance 12, the exact-shell encoding retains the 11,739 variables of the
 at-most formula and adds 20,638 clauses, for 1,968,253 total. The original
 at-most clause stream remains the exact prefix, and the default mode remains
-byte-compatible with the radius 1--12 generator.
+byte-compatible with the radius 1--12 generator. Metadata now also names the
+distance mode and interval, so its JSON bytes intentionally differ.
 
 ```sh
 ./run_exact_local_repair.sh 13 /tmp/z43-shell \
