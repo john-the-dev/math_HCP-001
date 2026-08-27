@@ -38,6 +38,12 @@ following default-on bounds for `G[B]`:
 `--no-block-edge-bounds` disables only these redundant constraints for
 diagnostic comparisons. It must not be used for the production proof ledger.
 
+`--pair-propagation-cuts` optionally adds the dual consequences that every
+edge has at most 13 common neighbors and every nonedge has at most 13 common
+nonneighbors. These follow from `R(3,5)=14`; they are off by default pending
+solver A/B measurements. The default-on block-edge bounds remain enabled when
+this option is selected.
+
 Python 3.10+ and `python-sat` are required. The development environment used
 `python-sat 1.9.dev15`.
 
@@ -108,6 +114,17 @@ the global 5-set clauses produced these measurements (Python 3.12,
 
 These are formula-construction measurements, not solver benchmarks or UNSAT
 claims.
+
+With both the default block bounds and optional pair cuts enabled, the same
+measurement produced:
+
+| case | core clauses | encoded variables | build seconds | maximum RSS |
+| --- | ---: | ---: | ---: | ---: |
+| d20-j2 | 2,022,766 | 1,028,767 | 0.864 | 348,028,928 bytes |
+| d20-j13 | 2,022,766 | 1,028,767 | 0.847 | 347,815,936 bytes |
+
+The unchanged global 5-set layer adds 1,701,336 clauses. These combined
+measurements are construction-only; no solver search was run.
 
 Every j-only manifest row records the recomputed `edge_min` and `edge_max`
 even though `edges` is null. The manifest describes work to run; it does not

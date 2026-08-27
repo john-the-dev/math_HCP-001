@@ -79,8 +79,36 @@ def degree_leq_clauses(u, w, pool):
         vpool=pool, encoding=EncType.seqcounter).clauses
 
 
+def conditional_conjunction_atmost(clauses, pool, conjunctions, bound, guard):
+    """Add guard => AtMost(bound, conjunctions), exact after projection."""
+    disabled = [-literal for literal in guard]
+    indicators = []
+    for conjunction in conjunctions:
+        indicator = pool.id()
+        indicators.append(indicator)
+        clauses.append(
+            [indicator] + [-literal for literal in conjunction] + disabled)
+    encoding = CardEnc.atmost(
+        indicators, bound=bound, vpool=pool, encoding=EncType.seqcounter)
+    clauses.extend(clause + disabled for clause in encoding.clauses)
+
+
+def pair_propagation_clauses(clauses, pool):
+    for u, v in PAIRS:
+        others = [w for w in range(N) if w not in (u, v)]
+        conditional_conjunction_atmost(
+            clauses, pool,
+            ((edge_var(u, w), edge_var(v, w)) for w in others),
+            13, (edge_var(u, v),))
+        conditional_conjunction_atmost(
+            clauses, pool,
+            ((-edge_var(u, w), -edge_var(v, w)) for w in others),
+            13, (-edge_var(u, v),))
+
+
 def core_clauses(degree, edge_count=None, a_internal_degree=None,
-                 enforce_block_edge_bounds=True):
+                 enforce_block_edge_bounds=True,
+                 enforce_pair_propagation=False):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
@@ -142,6 +170,8 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
     else:
         clauses.extend(CardEnc.equals(
             edges, bound=edge_count, vpool=pool, encoding=EncType.seqcounter).clauses)
+    if enforce_pair_propagation:
+        pair_propagation_clauses(clauses, pool)
     return clauses, pool.top
 
 
@@ -174,8 +204,27 @@ def verify_block_edge_bounds(adjacency, degree):
     return {"a_edges": counts[0], "b_edges": counts[1]}
 
 
+def verify_pair_propagation(adjacency):
+    all_vertices = (1 << N) - 1
+    maxima = [0, 0]
+    for u, v in PAIRS:
+        if (adjacency[u] >> v) & 1:
+            count = (adjacency[u] & adjacency[v]).bit_count()
+            maxima[0] = max(maxima[0], count)
+            require(count <= 13, "edge common-neighbor bound violated")
+        else:
+            excluded = (1 << u) | (1 << v)
+            count = (all_vertices & ~excluded &
+                     ~(adjacency[u] | adjacency[v])).bit_count()
+            maxima[1] = max(maxima[1], count)
+            require(count <= 13, "nonedge common-nonneighbor bound violated")
+    return {"max_edge_common_neighbors": maxima[0],
+            "max_nonedge_common_nonneighbors": maxima[1]}
+
+
 def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
-                 enforce_block_edge_bounds=True):
+                 enforce_block_edge_bounds=True,
+                 enforce_pair_propagation=False):
     require(len(adjacency) == N, "model must contain 42 adjacency rows")
     for u in range(N):
         require(not (adjacency[u] >> u) & 1, "self edge")
@@ -190,6 +239,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
         require(actual_edges == edge_count, "edge partition violated")
     block_counts = (verify_block_edge_bounds(adjacency, degree)
                     if enforce_block_edge_bounds else None)
+    pair_counts = (verify_pair_propagation(adjacency)
+                   if enforce_pair_propagation else None)
 
     degrees = [row.bit_count() for row in adjacency]
     for u, value in enumerate(degrees):
@@ -226,6 +277,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
     result = {"edges": actual_edges, "degrees": degrees}
     if block_counts is not None:
         result.update(block_counts)
+    if pair_counts is not None:
+        result.update(pair_counts)
     return result
 
 
@@ -243,7 +296,7 @@ def write_dimacs(path, clauses, top):
 def solve(args):
     clauses, top = core_clauses(
         args.degree, args.edges, args.a_internal_degree,
-        not args.no_block_edge_bounds)
+        not args.no_block_edge_bounds, args.pair_propagation_cuts)
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -253,6 +306,7 @@ def solve(args):
     print(f"degree={args.degree} edge_partition={args.edges} "
           f"a_internal_degree={args.a_internal_degree}")
     print(f"block_edge_bounds={'disabled' if args.no_block_edge_bounds else 'enabled'}")
+    print(f"pair_propagation_cuts={'enabled' if args.pair_propagation_cuts else 'disabled'}")
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,
@@ -270,6 +324,7 @@ def solve(args):
             "edge_partition": args.edges,
             "a_internal_degree": args.a_internal_degree,
             "block_edge_bounds": not args.no_block_edge_bounds,
+            "pair_propagation_cuts": args.pair_propagation_cuts,
             "solver": args.solver,
             "result": result,
             "vars": top,
@@ -281,7 +336,7 @@ def solve(args):
             adjacency = model_adjacency(solver.get_model())
             record["verification"] = verify_model(
                 adjacency, args.degree, args.edges, args.a_internal_degree,
-                not args.no_block_edge_bounds)
+                not args.no_block_edge_bounds, args.pair_propagation_cuts)
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
@@ -346,6 +401,9 @@ def main():
     parser.add_argument(
         "--no-block-edge-bounds", action="store_true",
         help="disable sound R(4,5,n) block-edge bounds for diagnostics")
+    parser.add_argument(
+        "--pair-propagation-cuts", action="store_true",
+        help="enable optional edge/common-neighborhood propagation cuts")
     parser.add_argument("--solver", default="cadical195")
     parser.add_argument("--cnf")
     parser.add_argument("--proof")
