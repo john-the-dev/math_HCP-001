@@ -65,22 +65,29 @@ def verify_table(path):
     print(f"implementation={IMPLEMENTATION}")
     print("k=14 mode=up_to_k under_target_hits=0 target_size_hits=0")
     print(f"total_states={total['states']} runtime_seconds={total['runtime_seconds']}")
+    return [int(row["distance"]) for row in anchors]
 
 
-def verify_rotation_bijection():
+def verify_rotation_bijection(anchor_distances):
     chords = {
         (u, v) for u, v in combinations(range(N), 2)
         if distance((u, v)) != 1
     }
     images = []
-    for d in sorted(DISTANCES):
+    anchor_orbits = []
+    for d in anchor_distances:
         representative = (0, d)
         require(distance(representative) == d, f"bad representative for {d}")
+        orbit = []
         for rotation in range(N):
             rotated = edge(rotation, (d + rotation) % N)
             require(distance(rotated) == d, f"rotation left distance class {d}")
             images.append(rotated)
+            orbit.append(rotated)
+        anchor_orbits.append(frozenset(orbit))
 
+    require(len(set(anchor_orbits)) == 20,
+            "run anchors do not represent 20 distinct rotation orbits")
     require(len(images) == 860, "expected 860 rotation images")
     require(len(set(images)) == 860, "rotation images are not pairwise distinct")
     require(set(images) == chords, "rotation images do not cover chord universe")
@@ -93,14 +100,15 @@ def verify_rotation_bijection():
                     "baseline color is not rotation-equivariant")
             color_checks += 1
     print("rotation_anchor_checks=860")
+    print("distinct_anchor_orbits=20 of 20")
     print("distinct_anchors_touched=860 of 860")
     print(f"rotation_color_checks={color_checks} failures=0")
     print("rotation_bijection=PASS")
 
 
 def main():
-    verify_table(Path(__file__).with_name("anchor-results.tsv"))
-    verify_rotation_bijection()
+    anchor_distances = verify_table(Path(__file__).with_name("anchor-results.tsv"))
+    verify_rotation_bijection(anchor_distances)
     print("PASS")
 
 

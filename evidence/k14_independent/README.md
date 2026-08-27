@@ -44,6 +44,7 @@ Expected terminal lines:
 
 ```text
 rotation_anchor_checks=860
+distinct_anchor_orbits=20 of 20
 distinct_anchors_touched=860 of 860
 rotation_color_checks=36980 failures=0
 rotation_bijection=PASS
