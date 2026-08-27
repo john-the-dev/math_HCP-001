@@ -79,6 +79,36 @@ Each implication uses projected conjunction indicators and a guarded
 sequential counter. `--no-block-pair-common-bounds` disables only these
 redundant propagation cuts for diagnostics; it is not a production setting.
 
+An additional opt-in family propagates two exact triple implications. If an
+independent triple in `A` has a set `S` of common nonneighbors, every pair in
+`S` must be adjacent or that pair and the triple form an I5. Since `A` has no
+K4, `|S| <= 3`. Dually, the common neighbors of a triangle in `B` must be
+pairwise nonadjacent or two of them and the triangle form a K5. Since `B` has
+no I4, that set also has size at most three. The opposite-polarity statements
+(an A-triangle has no common neighbor and a B-independent triple has no
+common nonneighbor) are already exactly the existing K4-in-A and I4-in-B
+clauses, so this family does not duplicate them.
+
+`--block-triple-common-bounds` enables these two implications. The three-edge
+condition and each three-literal common-set membership are projected exactly;
+a sequential at-most-three counter is guarded by all three condition
+literals. As with the pair cuts, these implications depend on the global
+K5/I5 clauses and do not make `core_clauses()` independently complete.
+
+Fresh-process construction measurements for d20-j2 on the same development
+environment are below. Times and peak RSS are medians of three runs; the
+1,701,336 global 5-set clauses are included only in the `total clauses`
+column and not materialized during this construction measurement.
+
+| triple cuts | core clauses | total clauses | encoded variables | build seconds | peak RSS bytes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| off | 879,802 | 2,581,138 | 440,369 | 0.323 | 195,428,352 |
+| on | 1,204,602 | 2,905,938 | 610,809 | 0.606 | 277,184,512 |
+
+Thus the opt-in family adds 324,800 core clauses, 170,440 variables, and about
+78 MiB median peak RSS in this representative case. These are construction
+measurements, not solver benchmarks or SAT/UNSAT claims.
+
 Python 3.10+ and `python-sat` are required. The development environment used
 `python-sat 1.9.dev15`.
 

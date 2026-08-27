@@ -90,18 +90,25 @@ def block_internal_degree_clauses(degree, pool):
 
 
 def _conditional_conjunction_atmost(conjunctions, bound, condition, pool):
+    return _conditional_conjunctions_atmost(
+        conjunctions, bound, (condition,), pool)
+
+
+def _conditional_conjunctions_atmost(conjunctions, bound, conditions, pool):
+    conditions = tuple(conditions)
     indicators = []
     clauses = []
     for conjunction in conjunctions:
         indicator = pool.id()
         indicators.append(indicator)
-        # condition is a signed literal; -condition intentionally flips it.
         clauses.append(
-            [indicator] + [-literal for literal in conjunction] + [-condition])
+            [indicator] + [-literal for literal in conjunction]
+            + [-literal for literal in conditions])
     encoded = CardEnc.atmost(
         indicators, bound=bound, vpool=pool,
         encoding=EncType.seqcounter).clauses
-    clauses.extend([[-condition] + clause for clause in encoded])
+    clauses.extend([[-literal for literal in conditions] + clause
+                    for clause in encoded])
     return clauses
 
 
@@ -122,6 +129,28 @@ def block_pair_common_clauses(degree, pool):
             clauses.extend(_conditional_conjunction_atmost(
                 ((-edge_var(u, w), -edge_var(v, w)) for w in others),
                 nonneighbor_bound, -edge, pool))
+    return clauses
+
+
+def block_triple_common_clauses(degree, pool):
+    """Encode the nonredundant A-independent/B-triangle triple bounds."""
+    clauses = []
+    for name, vertices in (("A", range(degree)), ("B", range(degree, N))):
+        vertices = list(vertices)
+        for triple in combinations(vertices, 3):
+            triple_edges = [edge_var(u, v)
+                            for u, v in combinations(triple, 2)]
+            others = [x for x in vertices if x not in triple]
+            if name == "A":
+                conditions = [-literal for literal in triple_edges]
+                conjunctions = ((-edge_var(u, x) for u in triple)
+                                for x in others)
+            else:
+                conditions = triple_edges
+                conjunctions = ((edge_var(u, x) for u in triple)
+                                for x in others)
+            clauses.extend(_conditional_conjunctions_atmost(
+                conjunctions, 3, conditions, pool))
     return clauses
 
 
@@ -165,7 +194,8 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
                  enforce_block_edge_bounds=True, a_edge_count=None,
                  enforce_block_degree_bounds=True,
                  enforce_block_pair_common_bounds=True,
-                 b_internal_degree=None):
+                 b_internal_degree=None,
+                 enforce_block_triple_common_bounds=False):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
@@ -206,6 +236,9 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
 
     if enforce_block_pair_common_bounds:
         clauses.extend(block_pair_common_clauses(degree, pool))
+
+    if enforce_block_triple_common_bounds:
+        clauses.extend(block_triple_common_clauses(degree, pool))
 
     for u in range(N):
         incident = [edge_var(u, v) for v in range(N) if v != u]
@@ -335,6 +368,31 @@ def verify_block_pair_common_bounds(adjacency, degree):
     return maxima
 
 
+def verify_block_triple_common_bounds(adjacency, degree):
+    maxima = {"a_independent_triple_common_nonneighbors": 0,
+              "b_triangle_common_neighbors": 0}
+    for name, vertices in (("A", range(degree)), ("B", range(degree, N))):
+        vertices = list(vertices)
+        for triple in combinations(vertices, 3):
+            edge_values = [bool((adjacency[u] >> v) & 1)
+                           for u, v in combinations(triple, 2)]
+            active = not any(edge_values) if name == "A" else all(edge_values)
+            if not active:
+                continue
+            count = 0
+            for x in vertices:
+                if x in triple:
+                    continue
+                incident = [bool((adjacency[u] >> x) & 1) for u in triple]
+                count += (not any(incident) if name == "A" else all(incident))
+            require(count <= 3,
+                    f"{name}-block triple common-set bound violated")
+            key = ("a_independent_triple_common_nonneighbors"
+                   if name == "A" else "b_triangle_common_neighbors")
+            maxima[key] = max(maxima[key], count)
+    return maxima
+
+
 def verify_distinguished_b(adjacency, degree, b_internal_degree, degrees=None):
     block_b = range(degree, N)
     distinguished_b = degree
@@ -364,7 +422,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
                  enforce_block_edge_bounds=True, a_edge_count=None,
                  enforce_block_degree_bounds=True,
                  enforce_block_pair_common_bounds=True,
-                 b_internal_degree=None):
+                 b_internal_degree=None,
+                 enforce_block_triple_common_bounds=False):
     require(len(adjacency) == N, "model must contain 42 adjacency rows")
     for u in range(N):
         require(not (adjacency[u] >> u) & 1, "self edge")
@@ -388,6 +447,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
                      if enforce_block_degree_bounds else None)
     pair_common = (verify_block_pair_common_bounds(adjacency, degree)
                    if enforce_block_pair_common_bounds else None)
+    triple_common = (verify_block_triple_common_bounds(adjacency, degree)
+                     if enforce_block_triple_common_bounds else None)
 
     degrees = [row.bit_count() for row in adjacency]
     for u, value in enumerate(degrees):
@@ -435,6 +496,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
         result.update(block_degrees)
     if pair_common is not None:
         result.update(pair_common)
+    if triple_common is not None:
+        result.update(triple_common)
     return result
 
 
@@ -458,7 +521,8 @@ def solve(args):
         a_edge_count=args.a_edges,
         enforce_block_degree_bounds=not args.no_block_degree_bounds,
         enforce_block_pair_common_bounds=not args.no_block_pair_common_bounds,
-        b_internal_degree=args.b_internal_degree)
+        b_internal_degree=args.b_internal_degree,
+        enforce_block_triple_common_bounds=args.block_triple_common_bounds)
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -474,6 +538,8 @@ def solve(args):
     print(f"block_degree_bounds={'disabled' if args.no_block_degree_bounds else 'enabled'}")
     print("block_pair_common_bounds="
           f"{'disabled' if args.no_block_pair_common_bounds else 'enabled'}")
+    print("block_triple_common_bounds="
+          f"{'enabled' if args.block_triple_common_bounds else 'disabled'}")
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,
@@ -494,6 +560,7 @@ def solve(args):
             "block_edge_bounds": not args.no_block_edge_bounds,
             "block_degree_bounds": not args.no_block_degree_bounds,
             "block_pair_common_bounds": not args.no_block_pair_common_bounds,
+            "block_triple_common_bounds": args.block_triple_common_bounds,
             "solver": args.solver,
             "result": result,
             "vars": top,
@@ -515,7 +582,9 @@ def solve(args):
                 enforce_block_degree_bounds=not args.no_block_degree_bounds,
                 enforce_block_pair_common_bounds=(
                     not args.no_block_pair_common_bounds),
-                b_internal_degree=args.b_internal_degree)
+                b_internal_degree=args.b_internal_degree,
+                enforce_block_triple_common_bounds=(
+                    args.block_triple_common_bounds))
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
@@ -620,6 +689,9 @@ def main():
     parser.add_argument(
         "--no-block-pair-common-bounds", action="store_true",
         help="disable sound within-block pair common-set bounds for diagnostics")
+    parser.add_argument(
+        "--block-triple-common-bounds", action="store_true",
+        help="enable sound within-block triple common-set propagation cuts")
     parser.add_argument("--solver", default="cadical195")
     parser.add_argument("--cnf")
     parser.add_argument("--proof")
