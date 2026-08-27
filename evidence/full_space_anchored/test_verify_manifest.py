@@ -20,6 +20,8 @@ class ManifestTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.valid = VERIFY.read_json(HERE / "j_partition_manifest.json")
+        cls.a_edge_valid = VERIFY.read_json(
+            HERE / "a_edge_partition_manifest.json")
 
     def assertRejected(self, data, pattern):
         with self.assertRaisesRegex(ValueError, pattern):
@@ -44,6 +46,39 @@ class ManifestTests(unittest.TestCase):
         data = deepcopy(self.valid)
         data["partitions"][0]["edge_min"] -= 1
         self.assertRejected(data, "edge_min must be")
+
+    def test_valid_a_edge_manifest_is_exhaustive(self):
+        ids = VERIFY.verify_manifest(self.a_edge_valid)
+        self.assertEqual(len(ids), 1368)
+        counts = {degree: 0 for degree in VERIFY.DEGREES}
+        for row in self.a_edge_valid["partitions"]:
+            counts[row["degree"]] += 1
+        self.assertEqual(counts, {18: 504, 19: 468, 20: 396})
+
+    def test_a_edge_manifest_missing_row_is_rejected(self):
+        data = deepcopy(self.a_edge_valid)
+        data["partitions"].pop()
+        data["partition_count"] -= 1
+        self.assertRejected(data, "case cover mismatch")
+
+    def test_a_edge_manifest_duplicate_row_is_rejected(self):
+        data = deepcopy(self.a_edge_valid)
+        data["partitions"].append(deepcopy(data["partitions"][0]))
+        data["partition_count"] += 1
+        self.assertRejected(data, "duplicate id")
+
+    def test_a_edge_manifest_out_of_range_case_is_rejected(self):
+        data = deepcopy(self.a_edge_valid)
+        row = data["partitions"][0]
+        row.update(id="d18-a49-j0", a_edges=49,
+                   cnf="d18-a49-j0.cnf", proof="d18-a49-j0.drat",
+                   result="d18-a49-j0.json")
+        self.assertRejected(data, "a_edges must be in 50..85")
+
+    def test_a_edge_manifest_bad_explicit_bound_is_rejected(self):
+        data = deepcopy(self.a_edge_valid)
+        data["partitions"][0]["a_edge_max"] = 86
+        self.assertRejected(data, "a_edge_max must be 85")
 
     def test_unsat_claim_without_artifacts_is_rejected(self):
         ids = VERIFY.verify_manifest(self.valid)

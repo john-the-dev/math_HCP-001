@@ -57,16 +57,21 @@ def block_edges(degree):
     return a_edges, b_edges
 
 
-def block_edge_clauses(degree, pool):
+def block_edge_clauses(degree, pool, a_edge_count=None):
     clauses = []
-    for edges, (minimum, maximum) in zip(
-            block_edges(degree), block_edge_bounds(degree)):
-        clauses.extend(CardEnc.atleast(
-            edges, bound=minimum, vpool=pool,
-            encoding=EncType.seqcounter).clauses)
-        clauses.extend(CardEnc.atmost(
-            edges, bound=maximum, vpool=pool,
-            encoding=EncType.seqcounter).clauses)
+    for index, (edges, (minimum, maximum)) in enumerate(zip(
+            block_edges(degree), block_edge_bounds(degree))):
+        if index == 0 and a_edge_count is not None:
+            clauses.extend(CardEnc.equals(
+                edges, bound=a_edge_count, vpool=pool,
+                encoding=EncType.seqcounter).clauses)
+        else:
+            clauses.extend(CardEnc.atleast(
+                edges, bound=minimum, vpool=pool,
+                encoding=EncType.seqcounter).clauses)
+            clauses.extend(CardEnc.atmost(
+                edges, bound=maximum, vpool=pool,
+                encoding=EncType.seqcounter).clauses)
     return clauses
 
 
@@ -80,7 +85,7 @@ def degree_leq_clauses(u, w, pool):
 
 
 def core_clauses(degree, edge_count=None, a_internal_degree=None,
-                 enforce_block_edge_bounds=True):
+                 enforce_block_edge_bounds=True, a_edge_count=None):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
@@ -90,6 +95,10 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
         lower_j, upper_j = a_internal_bounds(degree)
         require(lower_j <= a_internal_degree <= upper_j,
                 f"A-internal degree must be in {lower_j}..{upper_j}")
+    if a_edge_count is not None:
+        lower_a, upper_a = block_edge_bounds(degree)[0]
+        require(lower_a <= a_edge_count <= upper_a,
+                f"A edge count must be in {lower_a}..{upper_a}")
 
     pool = IDPool(start_from=len(PAIRS) + 1)
     clauses = []
@@ -102,7 +111,11 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
         clauses.append([edge_var(u, v) for u, v in combinations(vertices, 2)])
 
     if enforce_block_edge_bounds:
-        clauses.extend(block_edge_clauses(degree, pool))
+        clauses.extend(block_edge_clauses(degree, pool, a_edge_count))
+    elif a_edge_count is not None:
+        clauses.extend(CardEnc.equals(
+            block_edges(degree)[0], bound=a_edge_count, vpool=pool,
+            encoding=EncType.seqcounter).clauses)
 
     for u in range(N):
         incident = [edge_var(u, v) for v in range(N) if v != u]
@@ -175,7 +188,7 @@ def verify_block_edge_bounds(adjacency, degree):
 
 
 def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
-                 enforce_block_edge_bounds=True):
+                 enforce_block_edge_bounds=True, a_edge_count=None):
     require(len(adjacency) == N, "model must contain 42 adjacency rows")
     for u in range(N):
         require(not (adjacency[u] >> u) & 1, "self edge")
@@ -190,6 +203,11 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
         require(actual_edges == edge_count, "edge partition violated")
     block_counts = (verify_block_edge_bounds(adjacency, degree)
                     if enforce_block_edge_bounds else None)
+    actual_a_edges = sum((adjacency[u] >> v) & 1
+                         for u, v in combinations(range(degree), 2))
+    if a_edge_count is not None:
+        require(actual_a_edges == a_edge_count,
+                "A edge partition violated")
 
     degrees = [row.bit_count() for row in adjacency]
     for u, value in enumerate(degrees):
@@ -226,6 +244,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
     result = {"edges": actual_edges, "degrees": degrees}
     if block_counts is not None:
         result.update(block_counts)
+    elif a_edge_count is not None:
+        result["a_edges"] = actual_a_edges
     return result
 
 
@@ -243,7 +263,7 @@ def write_dimacs(path, clauses, top):
 def solve(args):
     clauses, top = core_clauses(
         args.degree, args.edges, args.a_internal_degree,
-        not args.no_block_edge_bounds)
+        not args.no_block_edge_bounds, args.a_edges)
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -251,7 +271,8 @@ def solve(args):
 
     started = time.perf_counter()
     print(f"degree={args.degree} edge_partition={args.edges} "
-          f"a_internal_degree={args.a_internal_degree}")
+          f"a_internal_degree={args.a_internal_degree} "
+          f"a_edge_partition={args.a_edges}")
     print(f"block_edge_bounds={'disabled' if args.no_block_edge_bounds else 'enabled'}")
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
@@ -269,6 +290,7 @@ def solve(args):
             "degree": args.degree,
             "edge_partition": args.edges,
             "a_internal_degree": args.a_internal_degree,
+            "a_edge_partition": args.a_edges,
             "block_edge_bounds": not args.no_block_edge_bounds,
             "solver": args.solver,
             "result": result,
@@ -281,7 +303,7 @@ def solve(args):
             adjacency = model_adjacency(solver.get_model())
             record["verification"] = verify_model(
                 adjacency, args.degree, args.edges, args.a_internal_degree,
-                not args.no_block_edge_bounds)
+                not args.no_block_edge_bounds, args.a_edges)
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
@@ -302,11 +324,20 @@ def write_manifest(path, mode):
             axes = ((edge_count, j)
                     for edge_count in range(minimum, maximum + 1)
                     for j in range(minimum_j, maximum_j + 1))
+        elif mode == "a-edge-j":
+            lower_a, upper_a = block_edge_bounds(degree)[0]
+            axes = ((a_edge_count, j)
+                    for a_edge_count in range(lower_a, upper_a + 1)
+                    for j in range(minimum_j, maximum_j + 1))
         else:
             axes = ((None, j) for j in range(minimum_j, maximum_j + 1))
-        for edge_count, j in axes:
+        for partition_value, j in axes:
+            edge_count = partition_value if mode == "edge-j" else None
+            a_edge_count = partition_value if mode == "a-edge-j" else None
             edge_part = f"-e{edge_count}" if edge_count is not None else ""
-            key = f"d{degree}{edge_part}-j{j}"
+            a_edge_part = (f"-a{a_edge_count}"
+                           if a_edge_count is not None else "")
+            key = f"d{degree}{edge_part}{a_edge_part}-j{j}"
             row = {
                 "id": key,
                 "degree": degree,
@@ -318,6 +349,10 @@ def write_manifest(path, mode):
             }
             if mode == "j-only":
                 row.update(edge_min=minimum, edge_max=maximum)
+            elif mode == "a-edge-j":
+                lower_a, upper_a = block_edge_bounds(degree)[0]
+                row.update(a_edges=a_edge_count, a_edge_min=lower_a,
+                           a_edge_max=upper_a)
             partitions.append(row)
     manifest = {
         "schema": 1,
@@ -328,6 +363,8 @@ def write_manifest(path, mode):
             "minimum-degree vertex of A; "
             + ("every admissible H edge count is fixed"
                if mode == "edge-j" else
+               "every admissible E(A) count is fixed"
+               if mode == "a-edge-j" else
                "H edge count is not fixed, with the degree-implied lower "
                "bound and |E(H)| <= 451-d enforced inside each formula")
         ),
@@ -342,6 +379,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--degree", type=int, choices=(18, 19, 20))
     parser.add_argument("--edges", type=int)
+    parser.add_argument("--a-edges", type=int)
     parser.add_argument("--a-internal-degree", type=int)
     parser.add_argument(
         "--no-block-edge-bounds", action="store_true",
@@ -352,7 +390,8 @@ def main():
     parser.add_argument("--json")
     parser.add_argument("--list-partitions", action="store_true")
     parser.add_argument("--write-manifest")
-    parser.add_argument("--manifest-mode", choices=("edge-j", "j-only"),
+    parser.add_argument("--manifest-mode",
+                        choices=("edge-j", "j-only", "a-edge-j"),
                         default="edge-j")
     args = parser.parse_args()
     if args.write_manifest:

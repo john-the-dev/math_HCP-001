@@ -46,6 +46,27 @@ class BlockEdgeBoundsTests(unittest.TestCase):
                         self.assertEqual(solver.solve(assumptions=assumptions),
                                          expected)
 
+    def test_exact_a_partition_accepts_only_requested_count(self):
+        degree = 20
+        a_edges = SAT.block_edges(degree)[0]
+        for requested in (68, 100):
+            pool = IDPool(start_from=len(SAT.PAIRS) + 1)
+            clauses = SAT.block_edge_clauses(degree, pool, requested)
+            with Solver(name="cadical195", bootstrap_with=clauses) as solver:
+                for count, expected in (
+                        (requested - 1, False), (requested, True),
+                        (requested + 1, False)):
+                    assumptions = [literal if index < count else -literal
+                                   for index, literal in enumerate(a_edges)]
+                    self.assertEqual(solver.solve(assumptions=assumptions),
+                                     expected)
+
+    def test_exact_a_partition_rejects_out_of_range_values(self):
+        for value in (67, 101):
+            with self.assertRaisesRegex(ValueError,
+                                        "A edge count must be in 68..100"):
+                SAT.core_clauses(20, None, 2, a_edge_count=value)
+
     def test_direct_verifier_checks_both_blocks(self):
         for degree in (18, 19, 20):
             (a_minimum, _), (b_minimum, _) = SAT.block_edge_bounds(degree)
@@ -76,6 +97,18 @@ class BlockEdgeBoundsTests(unittest.TestCase):
                 SAT.verify_block_edge_bounds(
                     adjacency_with_block_counts(
                         degree, a_minimum, b_maximum + 1), degree)
+
+    def test_direct_verifier_enforces_exact_a_partition(self):
+        degree = 20
+        adjacency = adjacency_with_block_counts(degree, 68, 117)
+        needed = SAT.edge_bounds(degree)[0] - 68 - 117
+        cross_edges = ((u, v) for u in range(degree)
+                       for v in range(degree, SAT.N))
+        for u, v in list(cross_edges)[:needed]:
+            adjacency[u] |= 1 << v
+            adjacency[v] |= 1 << u
+        with self.assertRaisesRegex(ValueError, "A edge partition violated"):
+            SAT.verify_model(adjacency, degree, a_edge_count=69)
 
     def test_constraints_are_default_on_for_d20_frontiers(self):
         for j in (2, 13):

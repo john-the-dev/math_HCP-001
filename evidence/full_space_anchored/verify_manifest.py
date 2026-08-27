@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the 39-case SAT manifest and any separately recorded UNSAT claims."""
+"""Verify supported SAT manifests and separately recorded UNSAT claims."""
 from hashlib import sha256
 from pathlib import Path
 import argparse
@@ -8,6 +8,11 @@ import re
 
 
 DEGREES = (18, 19, 20)
+A_EDGE_BOUNDS = {
+    18: (50, 85),
+    19: (57, 92),
+    20: (68, 100),
+}
 SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
@@ -24,10 +29,16 @@ def j_bounds(degree):
     return max(0, degree - 18), 13
 
 
-def expected_cases():
-    return {(degree, j)
+def expected_cases(mode):
+    if mode == "j-only":
+        return {(degree, j)
+                for degree in DEGREES
+                for j in range(j_bounds(degree)[0], j_bounds(degree)[1] + 1)}
+    return {(degree, j, a_edges)
             for degree in DEGREES
-            for j in range(j_bounds(degree)[0], j_bounds(degree)[1] + 1)}
+            for j in range(j_bounds(degree)[0], j_bounds(degree)[1] + 1)
+            for a_edges in range(A_EDGE_BOUNDS[degree][0],
+                                 A_EDGE_BOUNDS[degree][1] + 1)}
 
 
 def read_json(path):
@@ -38,7 +49,9 @@ def read_json(path):
 def verify_manifest(data):
     require(data.get("schema") == 1, "manifest schema must be 1")
     require(data.get("vertex_count") == 43, "vertex_count must be 43")
-    require(data.get("mode") == "j-only", "manifest mode must be j-only")
+    mode = data.get("mode")
+    require(mode in ("j-only", "a-edge-j"),
+            "manifest mode must be j-only or a-edge-j")
     rows = data.get("partitions")
     require(isinstance(rows, list), "partitions must be a list")
     require(data.get("partition_count") == len(rows),
@@ -53,12 +66,30 @@ def verify_manifest(data):
         require(degree in DEGREES, f"invalid degree: {degree}")
         require(isinstance(j, int), f"invalid j for degree {degree}")
         require(row.get("edges") is None, f"{row.get('id')}: edges must be null")
-        minimum, maximum = edge_bounds(degree)
-        require(row.get("edge_min") == minimum,
-                f"{row.get('id')}: edge_min must be {minimum}")
-        require(row.get("edge_max") == maximum,
-                f"{row.get('id')}: edge_max must be {maximum}")
-        expected_id = f"d{degree}-j{j}"
+        lower_j, upper_j = j_bounds(degree)
+        require(lower_j <= j <= upper_j,
+                f"invalid j for degree {degree}: {j}")
+        if mode == "j-only":
+            minimum, maximum = edge_bounds(degree)
+            require(row.get("edge_min") == minimum,
+                    f"{row.get('id')}: edge_min must be {minimum}")
+            require(row.get("edge_max") == maximum,
+                    f"{row.get('id')}: edge_max must be {maximum}")
+            case = (degree, j)
+            expected_id = f"d{degree}-j{j}"
+        else:
+            a_edges = row.get("a_edges")
+            lower_a, upper_a = A_EDGE_BOUNDS[degree]
+            require(isinstance(a_edges, int),
+                    f"{row.get('id')}: a_edges must be an integer")
+            require(row.get("a_edge_min") == lower_a,
+                    f"{row.get('id')}: a_edge_min must be {lower_a}")
+            require(row.get("a_edge_max") == upper_a,
+                    f"{row.get('id')}: a_edge_max must be {upper_a}")
+            require(lower_a <= a_edges <= upper_a,
+                    f"{row.get('id')}: a_edges must be in {lower_a}..{upper_a}")
+            case = (degree, j, a_edges)
+            expected_id = f"d{degree}-a{a_edges}-j{j}"
         require(row.get("id") == expected_id,
                 f"partition id must be {expected_id}")
         require(row.get("cnf") == f"{expected_id}.cnf",
@@ -68,16 +99,17 @@ def verify_manifest(data):
         require(row.get("result") == f"{expected_id}.json",
                 f"{expected_id}: invalid result filename")
         require(expected_id not in seen_ids, f"duplicate id: {expected_id}")
-        require((degree, j) not in seen_cases,
-                f"duplicate case: degree={degree} j={j}")
+        require(case not in seen_cases, f"duplicate case: {case}")
         seen_ids.add(expected_id)
-        seen_cases.add((degree, j))
+        seen_cases.add(case)
 
-    expected = expected_cases()
+    expected = expected_cases(mode)
     require(seen_cases == expected,
             f"case cover mismatch: missing={sorted(expected - seen_cases)} "
             f"extra={sorted(seen_cases - expected)}")
-    require(len(rows) == 39, "j-only manifest must contain 39 cases")
+    expected_count = 39 if mode == "j-only" else 1368
+    require(len(rows) == expected_count,
+            f"{mode} manifest must contain {expected_count} cases")
     return seen_ids
 
 

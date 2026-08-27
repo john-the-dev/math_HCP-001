@@ -118,6 +118,36 @@ Every j-only manifest row records the recomputed `edge_min` and `edge_max`
 even though `edges` is null. The manifest describes work to run; it does not
 claim that any partition is UNSAT or that proof artifacts currently exist.
 
+### Exact A-block edge partitions
+
+`--a-edges` fixes `E(A)` while leaving the total edge count unfixed. It is
+validated against the proven A-block ranges: `50..85` for `d=18`, `57..92`
+for `d=19`, and `68..100` for `d=20`. The 39-case j-only manifest and the
+default formula remain unchanged when this option is omitted.
+
+The `a-edge-j` manifest exhausts `(d,j,E(A))` with unique case and artifact
+names. Its 1,368 cases split as 504 for `d=18`, 468 for `d=19`, and 396 for
+`d=20`. Every row records its exact `a_edges` value and the applicable
+`a_edge_min` and `a_edge_max` bounds:
+
+```sh
+python3 anchored_sat.py --write-manifest a_edge_partition_manifest.json \
+  --manifest-mode a-edge-j
+python3 verify_manifest.py a_edge_partition_manifest.json
+python3 anchored_sat.py --degree 20 --a-internal-degree 2 --a-edges 68 \
+  --solver cadical195 --json d20-a68-j2.json
+```
+
+Formula-construction measurements on the development host (Python 3.12,
+`python-sat 1.9.dev15`) were:
+
+| case | core clauses | encoded variables | build seconds |
+| --- | ---: | ---: | ---: |
+| d20-a68-j2 | 719,590 | 354,761 | 0.191 |
+| d20-a100-j2 | 722,406 | 356,169 | 0.274 |
+
+These measurements do not include a solve and make no SAT or UNSAT claim.
+
 Certified results belong in a separate completion ledger. Each UNSAT claim
 must name relative CNF, proof, and checker-output paths and give the SHA-256
 of each artifact. The verifier hashes all three files and requires the checker
