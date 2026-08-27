@@ -13,6 +13,7 @@ For each `d`, the CNF searches all 861 edges of `H` and enforces:
 - no K5 or independent 5-set in `H`;
 - no K4 in `A` and no independent 4-set in `B`;
 - the exact known edge ranges for the induced `R(4,5,n)` blocks;
+- Ramsey-derived internal-degree bounds for every vertex of each block;
 - `deg_H(a) in [d-1,23]` and `deg_H(b) in [d,24]`;
 - at most `451-d` edges;
 - nondecreasing full `H`-degrees independently inside `A` and `B`.
@@ -35,8 +36,23 @@ following default-on bounds for `G[B]`:
 | 19 | 57..92 | 131..152 |
 | 20 | 68..100 | 117..143 |
 
-`--no-block-edge-bounds` disables only these redundant constraints for
-diagnostic comparisons. It must not be used for the production proof ledger.
+The same induced-subgraph conditions give per-vertex bounds. For `a in A`,
+its neighbors in `A` avoid K3/I5 and its nonneighbors in `A` avoid K4/I4.
+Using `R(3,5)=14` and `R(4,4)=18` gives
+`d-18 <= deg_A(a) <= 13`. For `b in B`, its neighbors in `B` avoid K4/I4
+and its nonneighbors in `B` avoid K5/I3, giving
+`28-d <= deg_B(b) <= 17`. The exact closed ranges are:
+
+| `d` | every `deg_A(a)` | every `deg_B(b)` |
+| --- | --- | --- |
+| 18 | 0..13 | 10..17 |
+| 19 | 1..13 | 9..17 |
+| 20 | 2..13 | 8..17 |
+
+`--no-block-edge-bounds` disables only the redundant block-edge constraints
+for diagnostic comparisons. It must not be used for the production proof ledger.
+`--no-block-degree-bounds` likewise disables only the per-vertex block-degree
+constraints for diagnostics; production formulas keep both families enabled.
 
 Python 3.10+ and `python-sat` are required. The development environment used
 `python-sat 1.9.dev15`.
@@ -109,6 +125,20 @@ the global 5-set clauses produced these measurements (Python 3.12,
 These are formula-construction measurements, not solver benchmarks or UNSAT
 claims.
 
+On the same Python 3.12 / `python-sat 1.9.dev15` development environment, the
+new per-vertex constraints changed the already block-edge-bounded d20 cores as
+follows. Times are medians of five construction runs:
+
+| case | block degree bounds | core clauses | encoded variables | build seconds |
+| --- | --- | ---: | ---: | ---: |
+| d20-j2 | off | 720,934 | 355,465 | 0.325 |
+| d20-j2 | on | 732,146 | 361,489 | 0.314 |
+| d20-j13 | off | 720,934 | 355,465 | 0.297 |
+| d20-j13 | on | 732,146 | 361,489 | 0.294 |
+
+These measurements exclude global 5-set clauses and solving and make no SAT
+or UNSAT claim. Build-time differences at this scale are timing noise.
+
 `discovery_runs.jsonl` records bounded discovery attempts that ended without a
 solver verdict. `INTERRUPTED_NO_VERDICT` means exactly that: it is throughput
 evidence only and is never accepted by the completion-ledger verifier as an
@@ -143,8 +173,8 @@ Formula-construction measurements on the development host (Python 3.12,
 
 | case | core clauses | encoded variables | build seconds |
 | --- | ---: | ---: | ---: |
-| d20-a68-j2 | 719,590 | 354,761 | 0.191 |
-| d20-a100-j2 | 722,406 | 356,169 | 0.274 |
+| d20-a68-j2 | 730,802 | 360,785 | 0.309 |
+| d20-a100-j2 | 733,618 | 362,193 | 0.336 |
 
 These measurements do not include a solve and make no SAT or UNSAT claim.
 

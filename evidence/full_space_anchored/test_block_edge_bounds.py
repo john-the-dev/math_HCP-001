@@ -112,9 +112,11 @@ class BlockEdgeBoundsTests(unittest.TestCase):
 
     def test_constraints_are_default_on_for_d20_frontiers(self):
         for j in (2, 13):
-            bounded, bounded_top = SAT.core_clauses(20, None, j)
+            bounded, bounded_top = SAT.core_clauses(
+                20, None, j, enforce_block_degree_bounds=False)
             unbounded, unbounded_top = SAT.core_clauses(
-                20, None, j, enforce_block_edge_bounds=False)
+                20, None, j, enforce_block_edge_bounds=False,
+                enforce_block_degree_bounds=False)
             self.assertEqual((len(unbounded), unbounded_top),
                              (634614, 312247))
             self.assertEqual((len(bounded), bounded_top),

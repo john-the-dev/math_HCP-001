@@ -57,6 +57,32 @@ def block_edges(degree):
     return a_edges, b_edges
 
 
+def block_internal_degree_bounds(degree):
+    """Return closed internal-degree bounds for vertices in A and B."""
+    return ((max(0, degree - 18), 13), (28 - degree, 17))
+
+
+def block_internal_degrees(degree):
+    blocks = (range(degree), range(degree, N))
+    return tuple([[edge_var(u, v) for v in block if v != u]
+                  for u in block] for block in blocks)
+
+
+def block_internal_degree_clauses(degree, pool):
+    clauses = []
+    for vertex_edges, (minimum, maximum) in zip(
+            block_internal_degrees(degree),
+            block_internal_degree_bounds(degree)):
+        for edges in vertex_edges:
+            clauses.extend(CardEnc.atleast(
+                edges, bound=minimum, vpool=pool,
+                encoding=EncType.seqcounter).clauses)
+            clauses.extend(CardEnc.atmost(
+                edges, bound=maximum, vpool=pool,
+                encoding=EncType.seqcounter).clauses)
+    return clauses
+
+
 def block_edge_clauses(degree, pool, a_edge_count=None):
     clauses = []
     for index, (edges, (minimum, maximum)) in enumerate(zip(
@@ -85,7 +111,8 @@ def degree_leq_clauses(u, w, pool):
 
 
 def core_clauses(degree, edge_count=None, a_internal_degree=None,
-                 enforce_block_edge_bounds=True, a_edge_count=None):
+                 enforce_block_edge_bounds=True, a_edge_count=None,
+                 enforce_block_degree_bounds=True):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
@@ -116,6 +143,9 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
         clauses.extend(CardEnc.equals(
             block_edges(degree)[0], bound=a_edge_count, vpool=pool,
             encoding=EncType.seqcounter).clauses)
+
+    if enforce_block_degree_bounds:
+        clauses.extend(block_internal_degree_clauses(degree, pool))
 
     for u in range(N):
         incident = [edge_var(u, v) for v in range(N) if v != u]
@@ -187,8 +217,23 @@ def verify_block_edge_bounds(adjacency, degree):
     return {"a_edges": counts[0], "b_edges": counts[1]}
 
 
+def verify_block_internal_degree_bounds(adjacency, degree):
+    result = {}
+    for name, vertices, (minimum, maximum) in zip(
+            ("A", "B"), (range(degree), range(degree, N)),
+            block_internal_degree_bounds(degree)):
+        values = [sum((adjacency[u] >> v) & 1
+                      for v in vertices if v != u)
+                  for u in vertices]
+        require(all(minimum <= value <= maximum for value in values),
+                f"{name}-block internal degree bound violated")
+        result[f"{name.lower()}_internal_degrees"] = values
+    return result
+
+
 def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
-                 enforce_block_edge_bounds=True, a_edge_count=None):
+                 enforce_block_edge_bounds=True, a_edge_count=None,
+                 enforce_block_degree_bounds=True):
     require(len(adjacency) == N, "model must contain 42 adjacency rows")
     for u in range(N):
         require(not (adjacency[u] >> u) & 1, "self edge")
@@ -208,6 +253,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
     if a_edge_count is not None:
         require(actual_a_edges == a_edge_count,
                 "A edge partition violated")
+    block_degrees = (verify_block_internal_degree_bounds(adjacency, degree)
+                     if enforce_block_degree_bounds else None)
 
     degrees = [row.bit_count() for row in adjacency]
     for u, value in enumerate(degrees):
@@ -246,6 +293,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
         result.update(block_counts)
     elif a_edge_count is not None:
         result["a_edges"] = actual_a_edges
+    if block_degrees is not None:
+        result.update(block_degrees)
     return result
 
 
@@ -263,7 +312,8 @@ def write_dimacs(path, clauses, top):
 def solve(args):
     clauses, top = core_clauses(
         args.degree, args.edges, args.a_internal_degree,
-        not args.no_block_edge_bounds, args.a_edges)
+        not args.no_block_edge_bounds, args.a_edges,
+        not args.no_block_degree_bounds)
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -274,6 +324,7 @@ def solve(args):
           f"a_internal_degree={args.a_internal_degree} "
           f"a_edge_partition={args.a_edges}")
     print(f"block_edge_bounds={'disabled' if args.no_block_edge_bounds else 'enabled'}")
+    print(f"block_degree_bounds={'disabled' if args.no_block_degree_bounds else 'enabled'}")
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,
@@ -292,6 +343,7 @@ def solve(args):
             "a_internal_degree": args.a_internal_degree,
             "a_edge_partition": args.a_edges,
             "block_edge_bounds": not args.no_block_edge_bounds,
+            "block_degree_bounds": not args.no_block_degree_bounds,
             "solver": args.solver,
             "result": result,
             "vars": top,
@@ -303,7 +355,8 @@ def solve(args):
             adjacency = model_adjacency(solver.get_model())
             record["verification"] = verify_model(
                 adjacency, args.degree, args.edges, args.a_internal_degree,
-                not args.no_block_edge_bounds, args.a_edges)
+                not args.no_block_edge_bounds, args.a_edges,
+                not args.no_block_degree_bounds)
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
@@ -384,6 +437,9 @@ def main():
     parser.add_argument(
         "--no-block-edge-bounds", action="store_true",
         help="disable sound R(4,5,n) block-edge bounds for diagnostics")
+    parser.add_argument(
+        "--no-block-degree-bounds", action="store_true",
+        help="disable sound per-vertex block-degree bounds for diagnostics")
     parser.add_argument("--solver", default="cadical195")
     parser.add_argument("--cnf")
     parser.add_argument("--proof")
