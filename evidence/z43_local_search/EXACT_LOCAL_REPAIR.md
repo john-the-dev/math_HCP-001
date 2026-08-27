@@ -39,6 +39,10 @@ decode` and audit the graph with the pre-existing independent
 ## Results
 
 The bounded experiment stopped after radius 8, well inside its 30-minute cap.
+Radius 8 logically subsumes radii 1--7: these are one nested exclusion checked
+at eight bounds, not eight independent assurances. The result rests on the
+radius-8 proof together with direct audit of the shared encoding; the smaller
+bounds are reproducibility and scaling checkpoints only.
 All solver times below are real seconds reported by CaDiCaL. Hashes bind both
 the generated CNF and the exact proof instance checked in this run; large
 transient artifacts were not committed. Radii 1--4 used ASCII DRAT and radii
