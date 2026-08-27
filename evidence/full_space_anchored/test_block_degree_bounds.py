@@ -96,7 +96,8 @@ class BlockDegreeBoundsTests(unittest.TestCase):
             enforce_block_pair_common_bounds=False,
             enforce_global_pair_common_bounds=False,
             enforce_cross_block_pair_common_bounds=False,
-            enforce_distinguished_cross_pair_degree_bounds=False)
+            enforce_distinguished_cross_pair_degree_bounds=False,
+            enforce_singleton_second_order_bounds=False)
         self.assertEqual((len(clauses), top), (730802, 360785))
 
 

@@ -406,6 +406,37 @@ distinguished core changes from 1,726,627 / 817,464 to 1,818,371 / 865,768;
 these counts exclude the 1,701,336 global five-set clauses and are not solver
 results.
 
+### Singleton second-order pair cuts
+
+One fixed pair on each applicable side supports a smaller second-order
+propagation pilot. For A, use the concretely fixed edge `a=0,u=1` when
+`j>0`, and let `S` be its common neighbors in B. The set `S` is K3-free and
+I4-free. For every nonedge `wx` in `S`, the common nonneighbors of `w,x`
+inside `S` form a clique, so K3-freeness bounds that set by two.
+
+Dually, when a fixed B-nonneighbor exists, use `b=d,u=d+k+1` and let `T` be
+their common nonneighbors in A. The set `T` is K4-free and I3-free. For every
+edge `wx` in `T`, its common neighbors inside `T` form an independent set, so
+I3-freeness again bounds that set by two. These are fixed labeled pairs already
+present in the partition clauses; selecting one pair makes no additional
+symmetry assumption and does not claim coverage for every possible `u`.
+
+Each bound is a signed eight-literal projection guarded by the `wx` pair
+literal. The A and B pilots activate independently under the same nonempty-side
+conditions as the distinguished cross-pair degree cuts.
+`--no-singleton-second-order-bounds` disables both for diagnostics. They add
+no partition axis and depend on the global K5/I5 and A-K4/B-I4 clauses, so a
+core-only verdict remains invalid. The clauses are logically implied by those
+base constraints; their role is propagation, and the new cardinality cuts are
+not subsumed by the preceding numerical cut families.
+
+For every fully applicable `d=20` case, the pilot adds 43,188 clauses and
+22,436 variables: 24,948 / 12,936 from A and 18,240 / 9,500 from B. Thus the
+`d20-j2-t19-k8` core changes from 1,818,371 / 865,768 to 1,861,559 /
+888,204, while `d20-j13-t23-k13` changes from 1,873,575 / 894,613 to
+1,916,763 / 917,049. These counts exclude the 1,701,336 global five-set
+clauses and are not solver results.
+
 ### Exact A-block edge partitions
 
 `--a-edges` fixes `E(A)` while leaving the total edge count unfixed. It is

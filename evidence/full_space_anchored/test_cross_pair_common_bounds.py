@@ -90,11 +90,13 @@ class GlobalPairCommonBoundsTests(unittest.TestCase):
     def test_constraints_are_default_on_with_diagnostic_opt_out(self):
         bounded, bounded_top = SAT.core_clauses(
             20, None, 2, enforce_cross_block_pair_common_bounds=False,
-            enforce_distinguished_cross_pair_degree_bounds=False)
+            enforce_distinguished_cross_pair_degree_bounds=False,
+            enforce_singleton_second_order_bounds=False)
         unbounded, unbounded_top = SAT.core_clauses(
             20, None, 2, enforce_global_pair_common_bounds=False,
             enforce_cross_block_pair_common_bounds=False,
-            enforce_distinguished_cross_pair_degree_bounds=False)
+            enforce_distinguished_cross_pair_degree_bounds=False,
+            enforce_singleton_second_order_bounds=False)
         self.assertEqual(len(bounded) - len(unbounded), 723240)
         self.assertEqual(bounded_top - unbounded_top, 311682)
         self.assertEqual((len(unbounded), unbounded_top), (879802, 440369))

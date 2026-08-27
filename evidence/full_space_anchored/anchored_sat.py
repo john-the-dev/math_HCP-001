@@ -240,6 +240,41 @@ def distinguished_cross_pair_degree_clauses(
     return clauses
 
 
+def singleton_second_order_clauses(
+        degree, a_internal_degree, b_internal_degree, pool):
+    """Encode second-order bounds for one fixed pair on each active side."""
+    clauses = []
+    if a_internal_degree is not None and a_internal_degree > 0:
+        distinguished_a = 0
+        fixed_neighbor = 1
+        block_b = list(range(degree, N))
+        for w, x in combinations(block_b, 2):
+            others = [y for y in block_b if y not in (w, x)]
+            clauses.extend(_conditional_conjunction_atmost(
+                ((edge_var(distinguished_a, w), edge_var(fixed_neighbor, w),
+                  edge_var(distinguished_a, x), edge_var(fixed_neighbor, x),
+                  edge_var(distinguished_a, y), edge_var(fixed_neighbor, y),
+                  -edge_var(w, y), -edge_var(x, y)) for y in others),
+                2, -edge_var(w, x), pool))
+    if (b_internal_degree is not None
+            and degree + b_internal_degree + 1 < N):
+        distinguished_b = degree
+        fixed_nonneighbor = degree + b_internal_degree + 1
+        block_a = list(range(degree))
+        for w, x in combinations(block_a, 2):
+            others = [y for y in block_a if y not in (w, x)]
+            clauses.extend(_conditional_conjunction_atmost(
+                ((-edge_var(distinguished_b, w),
+                  -edge_var(fixed_nonneighbor, w),
+                  -edge_var(distinguished_b, x),
+                  -edge_var(fixed_nonneighbor, x),
+                  -edge_var(distinguished_b, y),
+                  -edge_var(fixed_nonneighbor, y),
+                  edge_var(w, y), edge_var(x, y)) for y in others),
+                2, edge_var(w, x), pool))
+    return clauses
+
+
 def residual_block_degree_clauses(degree, a_internal_degree,
                                   b_internal_degree, pool):
     """Encode Ramsey degree bounds inside the four fixed residual blocks."""
@@ -311,7 +346,8 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
                  a_total_degree=None,
                  enforce_distinguished_cross_triple_bounds=True,
                  enforce_residual_block_degree_bounds=True,
-                 enforce_distinguished_cross_pair_degree_bounds=True):
+                 enforce_distinguished_cross_pair_degree_bounds=True,
+                 enforce_singleton_second_order_bounds=True):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
@@ -435,6 +471,11 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
             and (a_internal_degree is not None
                  or b_internal_degree is not None)):
         clauses.extend(distinguished_cross_pair_degree_clauses(
+            degree, a_internal_degree, b_internal_degree, pool))
+    if (enforce_singleton_second_order_bounds
+            and (a_internal_degree is not None
+                 or b_internal_degree is not None)):
+        clauses.extend(singleton_second_order_clauses(
             degree, a_internal_degree, b_internal_degree, pool))
 
     edges = list(EDGE_VAR.values())
@@ -638,6 +679,42 @@ def verify_distinguished_cross_pair_degree_bounds(
     return maxima
 
 
+def verify_singleton_second_order_bounds(
+        adjacency, degree, a_internal_degree, b_internal_degree):
+    maxima = {"singleton_a_second_order_nonneighbors": 0,
+              "singleton_b_second_order_neighbors": 0}
+    if a_internal_degree is not None and a_internal_degree > 0:
+        common = [z for z in range(degree, N)
+                  if (adjacency[0] >> z) & 1
+                  and (adjacency[1] >> z) & 1]
+        for w, x in combinations(common, 2):
+            if not ((adjacency[w] >> x) & 1):
+                count = sum(not ((adjacency[w] >> y) & 1)
+                            and not ((adjacency[x] >> y) & 1)
+                            for y in common if y not in (w, x))
+                require(count <= 2,
+                        "singleton A second-order bound violated")
+                maxima["singleton_a_second_order_nonneighbors"] = max(
+                    maxima["singleton_a_second_order_nonneighbors"], count)
+    if (b_internal_degree is not None
+            and degree + b_internal_degree + 1 < N):
+        distinguished_b = degree
+        fixed_nonneighbor = degree + b_internal_degree + 1
+        common = [z for z in range(degree)
+                  if not ((adjacency[distinguished_b] >> z) & 1)
+                  and not ((adjacency[fixed_nonneighbor] >> z) & 1)]
+        for w, x in combinations(common, 2):
+            if (adjacency[w] >> x) & 1:
+                count = sum((adjacency[w] >> y) & 1
+                            and (adjacency[x] >> y) & 1
+                            for y in common if y not in (w, x))
+                require(count <= 2,
+                        "singleton B second-order bound violated")
+                maxima["singleton_b_second_order_neighbors"] = max(
+                    maxima["singleton_b_second_order_neighbors"], count)
+    return maxima
+
+
 def verify_residual_block_degree_bounds(
         adjacency, degree, a_internal_degree, b_internal_degree):
     distinguished_b = degree
@@ -720,7 +797,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
                  a_total_degree=None,
                  enforce_distinguished_cross_triple_bounds=True,
                  enforce_residual_block_degree_bounds=True,
-                 enforce_distinguished_cross_pair_degree_bounds=True):
+                 enforce_distinguished_cross_pair_degree_bounds=True,
+                 enforce_singleton_second_order_bounds=True):
     if a_total_degree is not None:
         require(a_internal_degree is not None,
                 "A-total degree requires A-internal degree")
@@ -792,6 +870,12 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
         distinguished_cross_pair_degrees = (
             verify_distinguished_cross_pair_degree_bounds(
                 adjacency, degree, a_internal_degree, b_internal_degree))
+    singleton_second_order = None
+    if (enforce_singleton_second_order_bounds
+            and (a_internal_degree is not None
+                 or b_internal_degree is not None)):
+        singleton_second_order = verify_singleton_second_order_bounds(
+            adjacency, degree, a_internal_degree, b_internal_degree)
 
     for vertices in combinations(range(degree), 4):
         require(not all((adjacency[u] >> v) & 1
@@ -822,6 +906,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
         result.update(residual_degrees)
     if distinguished_cross_pair_degrees is not None:
         result.update(distinguished_cross_pair_degrees)
+    if singleton_second_order is not None:
+        result.update(singleton_second_order)
     return result
 
 
@@ -858,6 +944,12 @@ def solve(args):
     cross_pair_b_active = (
         not args.no_distinguished_cross_pair_degree_bounds
         and cross_pair_b_applicable)
+    singleton_a_active = (
+        not args.no_singleton_second_order_bounds
+        and cross_pair_a_applicable)
+    singleton_b_active = (
+        not args.no_singleton_second_order_bounds
+        and cross_pair_b_applicable)
     clauses, top = core_clauses(
         degree=args.degree,
         edge_count=args.edges,
@@ -877,7 +969,9 @@ def solve(args):
         enforce_residual_block_degree_bounds=(
             residual_block_degree_active),
         enforce_distinguished_cross_pair_degree_bounds=(
-            cross_pair_a_active or cross_pair_b_active))
+            cross_pair_a_active or cross_pair_b_active),
+        enforce_singleton_second_order_bounds=(
+            singleton_a_active or singleton_b_active))
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -912,6 +1006,11 @@ def solve(args):
               args.no_distinguished_cross_pair_degree_bounds,
               cross_pair_a_applicable,
               cross_pair_b_applicable))
+    print("singleton_second_order_bounds="
+          + configured_side_bound_state(
+              args.no_singleton_second_order_bounds,
+              cross_pair_a_applicable,
+              cross_pair_b_applicable))
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,
@@ -944,6 +1043,10 @@ def solve(args):
                 cross_pair_a_active or cross_pair_b_active),
             "distinguished_cross_pair_degree_a": cross_pair_a_active,
             "distinguished_cross_pair_degree_b": cross_pair_b_active,
+            "singleton_second_order_bounds": (
+                singleton_a_active or singleton_b_active),
+            "singleton_second_order_a": singleton_a_active,
+            "singleton_second_order_b": singleton_b_active,
             "solver": args.solver,
             "result": result,
             "vars": top,
@@ -976,7 +1079,9 @@ def solve(args):
                 enforce_residual_block_degree_bounds=(
                     residual_block_degree_active),
                 enforce_distinguished_cross_pair_degree_bounds=(
-                    cross_pair_a_active or cross_pair_b_active))
+                    cross_pair_a_active or cross_pair_b_active),
+                enforce_singleton_second_order_bounds=(
+                    singleton_a_active or singleton_b_active))
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
@@ -1125,6 +1230,9 @@ def main():
     parser.add_argument(
         "--no-distinguished-cross-pair-degree-bounds", action="store_true",
         help="disable distinguished cross-pair degree bounds for diagnostics")
+    parser.add_argument(
+        "--no-singleton-second-order-bounds", action="store_true",
+        help="disable singleton second-order bounds for diagnostics")
     parser.add_argument("--solver", default="cadical195")
     parser.add_argument("--cnf")
     parser.add_argument("--proof")

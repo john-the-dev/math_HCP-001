@@ -173,19 +173,24 @@ class ResidualBlockDegreeTests(unittest.TestCase):
              residual_active) in cases:
             for cross_pair_off in (False, True):
                 for cross_pair_degree_off in (False, True):
-                    with self.subTest(
-                            degree=degree, j=j, k=k, cross_off=cross_off,
-                            residual_off=residual_off,
-                            cross_pair_off=cross_pair_off,
-                            cross_pair_degree_off=cross_pair_degree_off):
-                        self._check_solve_provenance_case(
-                            degree, j, k, cross_off, residual_off, state,
-                            cross_active, residual_active, cross_pair_off,
-                            cross_pair_degree_off, FakeSolver)
+                    for singleton_off in (False, True):
+                        with self.subTest(
+                                degree=degree, j=j, k=k,
+                                cross_off=cross_off,
+                                residual_off=residual_off,
+                                cross_pair_off=cross_pair_off,
+                                cross_pair_degree_off=cross_pair_degree_off,
+                                singleton_off=singleton_off):
+                            self._check_solve_provenance_case(
+                                degree, j, k, cross_off, residual_off, state,
+                                cross_active, residual_active, cross_pair_off,
+                                cross_pair_degree_off, singleton_off,
+                                FakeSolver)
 
     def _check_solve_provenance_case(
             self, degree, j, k, cross_off, residual_off, state, cross_active,
             residual_active, cross_pair_off, cross_pair_degree_off,
+            singleton_off,
             fake_solver_class):
         core_calls = []
         verify_calls = []
@@ -210,6 +215,7 @@ class ResidualBlockDegreeTests(unittest.TestCase):
                 no_cross_block_pair_common_bounds=cross_pair_off,
                 no_distinguished_cross_pair_degree_bounds=(
                     cross_pair_degree_off),
+                no_singleton_second_order_bounds=singleton_off,
                 no_distinguished_cross_triple_bounds=cross_off,
                 no_residual_block_degree_bounds=residual_off,
                 solver="glucose4", cnf=None, proof=None,
@@ -246,6 +252,12 @@ class ResidualBlockDegreeTests(unittest.TestCase):
         self.assertIn(
             f"distinguished_cross_pair_degree_bounds={pair_state}",
             output.getvalue())
+        singleton_a_active = not singleton_off and a_pair_applicable
+        singleton_b_active = not singleton_off and b_pair_applicable
+        singleton_state = SAT.configured_side_bound_state(
+            singleton_off, a_pair_applicable, b_pair_applicable)
+        self.assertIn(f"singleton_second_order_bounds={singleton_state}",
+                      output.getvalue())
         for call in core_calls + verify_calls:
             self.assertEqual(
                 call["enforce_cross_block_pair_common_bounds"],
@@ -259,6 +271,9 @@ class ResidualBlockDegreeTests(unittest.TestCase):
             self.assertEqual(
                 call["enforce_distinguished_cross_pair_degree_bounds"],
                 a_pair_active or b_pair_active)
+            self.assertEqual(
+                call["enforce_singleton_second_order_bounds"],
+                singleton_a_active or singleton_b_active)
         self.assertEqual(record["distinguished_cross_triple_bounds"],
                          cross_active)
         self.assertEqual(record["residual_block_degree_bounds"],
@@ -271,6 +286,12 @@ class ResidualBlockDegreeTests(unittest.TestCase):
                          a_pair_active)
         self.assertEqual(record["distinguished_cross_pair_degree_b"],
                          b_pair_active)
+        self.assertEqual(record["singleton_second_order_bounds"],
+                         singleton_a_active or singleton_b_active)
+        self.assertEqual(record["singleton_second_order_a"],
+                         singleton_a_active)
+        self.assertEqual(record["singleton_second_order_b"],
+                         singleton_b_active)
 
 
 if __name__ == "__main__":
