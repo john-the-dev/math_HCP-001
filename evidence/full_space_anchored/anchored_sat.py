@@ -168,6 +168,31 @@ def distinguished_cross_triple_clauses(degree, a_internal_degree,
     return clauses
 
 
+def residual_block_degree_clauses(degree, a_internal_degree,
+                                  b_internal_degree, pool):
+    """Encode Ramsey degree bounds inside the four fixed residual blocks."""
+    distinguished_b = degree
+    blocks = (
+        (range(1, a_internal_degree + 1), False),
+        (range(a_internal_degree + 1, degree), True),
+        (range(distinguished_b + 1,
+               distinguished_b + b_internal_degree + 1), False),
+        (range(distinguished_b + b_internal_degree + 1, N), True),
+    )
+    clauses = []
+    for vertices, bound_neighbors in blocks:
+        vertices = list(vertices)
+        if len(vertices) <= 9:
+            continue
+        for u in vertices:
+            literals = [edge_var(u, v) if bound_neighbors else -edge_var(u, v)
+                        for v in vertices if v != u]
+            clauses.extend(CardEnc.atmost(
+                literals, bound=8, vpool=pool,
+                encoding=EncType.seqcounter).clauses)
+    return clauses
+
+
 def block_edge_clauses(degree, pool, a_edge_count=None):
     clauses = []
     for index, (edges, (minimum, maximum)) in enumerate(zip(
@@ -211,7 +236,8 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
                  b_internal_degree=None,
                  enforce_global_pair_common_bounds=True,
                  a_total_degree=None,
-                 enforce_distinguished_cross_triple_bounds=True):
+                 enforce_distinguished_cross_triple_bounds=True,
+                 enforce_residual_block_degree_bounds=True):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
@@ -322,6 +348,11 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
             and a_internal_degree is not None
             and b_internal_degree is not None):
         clauses.extend(distinguished_cross_triple_clauses(
+            degree, a_internal_degree, b_internal_degree, pool))
+    if (enforce_residual_block_degree_bounds
+            and a_internal_degree is not None
+            and b_internal_degree is not None):
+        clauses.extend(residual_block_degree_clauses(
             degree, a_internal_degree, b_internal_degree, pool))
 
     edges = list(EDGE_VAR.values())
@@ -454,6 +485,31 @@ def verify_distinguished_cross_triple_bounds(
     return maxima
 
 
+def verify_residual_block_degree_bounds(
+        adjacency, degree, a_internal_degree, b_internal_degree):
+    distinguished_b = degree
+    blocks = (
+        ("a_plus", range(1, a_internal_degree + 1), False),
+        ("a_minus", range(a_internal_degree + 1, degree), True),
+        ("b_plus", range(distinguished_b + 1,
+                         distinguished_b + b_internal_degree + 1), False),
+        ("b_minus", range(distinguished_b + b_internal_degree + 1, N), True),
+    )
+    maxima = {}
+    for name, vertices, count_neighbors in blocks:
+        vertices = list(vertices)
+        maximum = 0
+        for u in vertices:
+            count = sum(bool((adjacency[u] >> v) & 1) == count_neighbors
+                        for v in vertices if v != u)
+            require(count <= 8,
+                    f"{name} residual-block degree bound violated")
+            maximum = max(maximum, count)
+        key = f"{name}_{'neighbors' if count_neighbors else 'nonneighbors'}"
+        maxima[key] = maximum
+    return maxima
+
+
 def verify_distinguished_a(adjacency, degree, a_internal_degree,
                            a_total_degree=None, degrees=None):
     j = a_internal_degree
@@ -508,7 +564,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
                  b_internal_degree=None,
                  enforce_global_pair_common_bounds=True,
                  a_total_degree=None,
-                 enforce_distinguished_cross_triple_bounds=True):
+                 enforce_distinguished_cross_triple_bounds=True,
+                 enforce_residual_block_degree_bounds=True):
     if a_total_degree is not None:
         require(a_internal_degree is not None,
                 "A-total degree requires A-internal degree")
@@ -564,6 +621,12 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
             and b_internal_degree is not None):
         distinguished_triples = verify_distinguished_cross_triple_bounds(
             adjacency, degree, a_internal_degree, b_internal_degree)
+    residual_degrees = None
+    if (enforce_residual_block_degree_bounds
+            and a_internal_degree is not None
+            and b_internal_degree is not None):
+        residual_degrees = verify_residual_block_degree_bounds(
+            adjacency, degree, a_internal_degree, b_internal_degree)
 
     for vertices in combinations(range(degree), 4):
         require(not all((adjacency[u] >> v) & 1
@@ -588,6 +651,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
         result.update(global_pair_common)
     if distinguished_triples is not None:
         result.update(distinguished_triples)
+    if residual_degrees is not None:
+        result.update(residual_degrees)
     return result
 
 
@@ -616,7 +681,9 @@ def solve(args):
             not args.no_global_pair_common_bounds),
         a_total_degree=args.a_total_degree,
         enforce_distinguished_cross_triple_bounds=(
-            not args.no_distinguished_cross_triple_bounds))
+            not args.no_distinguished_cross_triple_bounds),
+        enforce_residual_block_degree_bounds=(
+            not args.no_residual_block_degree_bounds))
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -638,6 +705,8 @@ def solve(args):
           f"{'disabled' if args.no_global_pair_common_bounds else 'enabled'}")
     print("distinguished_cross_triple_bounds="
           f"{'disabled' if args.no_distinguished_cross_triple_bounds else 'enabled'}")
+    print("residual_block_degree_bounds="
+          f"{'disabled' if args.no_residual_block_degree_bounds else 'enabled'}")
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,
@@ -662,6 +731,8 @@ def solve(args):
             "global_pair_common_bounds": not args.no_global_pair_common_bounds,
             "distinguished_cross_triple_bounds": (
                 not args.no_distinguished_cross_triple_bounds),
+            "residual_block_degree_bounds": (
+                not args.no_residual_block_degree_bounds),
             "solver": args.solver,
             "result": result,
             "vars": top,
@@ -688,7 +759,9 @@ def solve(args):
                     not args.no_global_pair_common_bounds),
                 a_total_degree=args.a_total_degree,
                 enforce_distinguished_cross_triple_bounds=(
-                    not args.no_distinguished_cross_triple_bounds))
+                    not args.no_distinguished_cross_triple_bounds),
+                enforce_residual_block_degree_bounds=(
+                    not args.no_residual_block_degree_bounds))
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
@@ -828,6 +901,9 @@ def main():
     parser.add_argument(
         "--no-distinguished-cross-triple-bounds", action="store_true",
         help="disable distinguished cross-block triple bounds for diagnostics")
+    parser.add_argument(
+        "--no-residual-block-degree-bounds", action="store_true",
+        help="disable residual-block Ramsey degree bounds for diagnostics")
     parser.add_argument("--solver", default="cadical195")
     parser.add_argument("--cnf")
     parser.add_argument("--proof")

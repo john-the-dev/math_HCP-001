@@ -320,6 +320,41 @@ to 1,624,223 clauses / 762,868 variables. The global 1,701,336 five-set
 clauses are excluded. This is a deterministic construction count, not a
 solver benchmark or a SAT/UNSAT claim.
 
+### Residual-block degree cuts
+
+The fixed neighborhoods of the distinguished vertices split the remaining
+vertices into `A+`, `A-`, `B+`, and `B-`, of respective sizes `j`,
+`d-1-j`, `k`, and `41-d-k`. These blocks admit direct per-vertex Ramsey cuts:
+
+- every vertex of `A+` or `B+` has at most eight nonneighbors in that block;
+- every vertex of `A-` or `B-` has at most eight neighbors in that block.
+
+For `A+`, a triangle would complete a K4 with the distinguished A vertex.
+The nonneighbors of any vertex in `A+` therefore contain neither a K3 nor an
+I4, the latter completing an I5 with that vertex. For `A-`, the block has no
+K4 and no I4, since such an I4 would complete an I5 with the distinguished A
+vertex. The neighbors of any one vertex contain neither a K3 nor an I4.
+Thus `R(3,4)=9` gives both A-side bounds. Dually, `B+` has no K4 or I4, and
+the nonneighbors of one vertex contain neither a K4 nor an I3; `B-` has no
+I3 or K5, and the neighbors of one vertex contain neither a K4 nor an I3.
+`R(4,3)=9` gives both B-side bounds.
+
+Because membership in all four blocks is already fixed by `j` and `k`, these
+are ordinary signed-literal sequential counters with no projected membership
+variables. Blocks of size at most nine need no clauses. The cuts are enabled
+by default when both distinguished vertices are present;
+`--no-residual-block-degree-bounds` is a diagnostic opt-out. They add no
+partition axis, apply for every `t`, and leave the 193-case and 1,142-case
+covers unchanged. Their derivation uses the global K5/I5 clauses together
+with the A-K4/B-I4 clauses, so a core-only verdict remains invalid.
+
+On the integration host, enabling the residual cuts on top of the global-pair
+and distinguished-triple cuts changed `d20-j2-k8` from 1,624,223 clauses /
+762,868 variables to 1,627,179 clauses / 764,372 variables. For
+`d20-j13-k13`, the corresponding change was 1,629,127 / 765,401 to
+1,630,687 / 766,233. These deterministic core counts exclude the 1,701,336
+global five-set clauses and make no solver-result claim.
+
 ### Exact A-block edge partitions
 
 `--a-edges` fixes `E(A)` while leaving the total edge count unfixed. It is
