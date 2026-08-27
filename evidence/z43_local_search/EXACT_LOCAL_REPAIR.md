@@ -33,8 +33,7 @@ for radius in 5 6 7 8 9; do
   ./run_exact_local_repair.sh "$radius" /tmp/z43-local \
     "$(command -v cadical)" /path/to/drat-trim binary
 done
-python3 verify_exact_local_evidence.py \
-  --artifact-prefix /tmp/z43-local/z43-local
+python3 verify_exact_local_evidence.py
 ```
 
 The runner treats only CaDiCaL status 20 followed by `drat-trim`'s exact
@@ -59,6 +58,10 @@ leaving the deterministic CNF unchanged. Reproduction therefore requires
 rechecking the newly generated proof rather than expecting its hash to equal a
 previous run. The hashes below identify the proofs that produced the preserved
 checker outputs, not every valid reproduction proof.
+The runner above independently verifies each newly generated proof. The
+optional `--artifact-prefix` mode is instead an authentication check for the
+retained original artifacts and is expected to reject non-byte-identical fresh
+proofs or checker logs, even when their proof checks succeed.
 
 | radius | format | variables | clauses | solver s | CNF SHA-256 | proof SHA-256 |
 |---:|---|---:|---:|---:|---|---|
