@@ -10,6 +10,8 @@ from replay_published import (EMPTY_SHA256, IMPLEMENTATION, MODE, digest,
 
 DISTANCES = set(range(2, 22))
 INTMASK_IMPLEMENTATION = "independent_intmask_dedupe_maxincidence"
+INTMASK_RESULTS_SHA256 = (
+    "e626d54f7892b88af208dc39f18185e24073aa175a1a94a7b7e64f2bc7d9d727")
 
 
 def require(condition, message):
@@ -51,6 +53,8 @@ def main():
         / "anchor-results.tsv"
     intmask_sha = verify_manifest_entry(
         table_path.parent / "SHA256SUMS", table_path.name, table_path)
+    require(intmask_sha == INTMASK_RESULTS_SHA256,
+            "independent results differ from the pinned evidence digest")
     with table_path.open(newline="") as handle:
         rows = [row for row in DictReader(handle, delimiter="\t")
                 if row["distance"] != "TOTAL"]

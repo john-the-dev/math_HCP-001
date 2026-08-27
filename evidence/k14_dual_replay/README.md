@@ -40,7 +40,10 @@ survivors for every anchor; internal state totals are not expected to match.
 Their differing state totals are evidence that the searches use materially
 different traversals: for example, at distance 2 the published implementation
 explored 236,233 states while the independent implementation explored 175,716,
-and both found zero survivors.
+and both found zero survivors. Chi independently reproduced the latter search
+and exact 175,716 state count from her own source copy. The committed verifier
+pins the independent table to SHA-256
+`e626d54f7892b88af208dc39f18185e24073aa175a1a94a7b7e64f2bc7d9d727`.
 
 ```text
 distances=2..21 anchors=20
