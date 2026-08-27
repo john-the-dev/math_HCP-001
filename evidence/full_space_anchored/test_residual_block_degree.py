@@ -2,8 +2,13 @@
 """Tests for residual-block Ramsey degree bounds."""
 from pathlib import Path
 from types import SimpleNamespace
+from contextlib import redirect_stdout
 import importlib.util
+import io
+import json
+import tempfile
 import unittest
+from unittest.mock import patch
 
 from pysat.formula import IDPool
 from pysat.solvers import Solver
@@ -130,6 +135,96 @@ class ResidualBlockDegreeTests(unittest.TestCase):
             20, a_internal_degree=2,
             enforce_residual_block_degree_bounds=False)
         self.assertEqual(j_only, j_only_disabled)
+
+    def test_solve_provenance_matrix_matches_forwarded_flags(self):
+        class FakeSolver:
+            def __init__(self, **_kwargs):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def add_clause(self, _clause):
+                pass
+
+            def solve(self):
+                return True
+
+            def accum_stats(self):
+                return {}
+
+            def get_model(self):
+                return []
+
+        cases = (
+            (None, None, False, False, "not-applicable", False, False),
+            (2, None, False, False, "not-applicable", False, False),
+            (None, 8, False, False, "not-applicable", False, False),
+            (2, 8, False, False, "enabled", True, True),
+            (2, 8, True, False, "disabled", False, True),
+            (2, 8, False, True, "disabled", True, False),
+        )
+        for j, k, cross_off, residual_off, state, cross_active, residual_active in cases:
+            with self.subTest(j=j, k=k, cross_off=cross_off,
+                              residual_off=residual_off):
+                core_calls = []
+                verify_calls = []
+
+                def fake_core(**kwargs):
+                    core_calls.append(kwargs)
+                    return [], len(SAT.PAIRS)
+
+                def fake_verify(*_args, **kwargs):
+                    verify_calls.append(kwargs)
+                    return {}
+
+                with tempfile.TemporaryDirectory() as raw_temp:
+                    result_path = Path(raw_temp) / "result.json"
+                    args = SimpleNamespace(
+                        degree=20, edges=None, a_internal_degree=j,
+                        a_total_degree=None, b_internal_degree=k,
+                        a_edges=None, no_block_edge_bounds=False,
+                        no_block_degree_bounds=False,
+                        no_block_pair_common_bounds=False,
+                        no_global_pair_common_bounds=False,
+                        no_distinguished_cross_triple_bounds=cross_off,
+                        no_residual_block_degree_bounds=residual_off,
+                        solver="glucose4", cnf=None, proof=None,
+                        json=str(result_path))
+                    output = io.StringIO()
+                    with (patch.object(SAT, "core_clauses", fake_core),
+                          patch.object(SAT, "verify_model", fake_verify),
+                          patch.object(SAT, "model_adjacency",
+                                       return_value=[0] * SAT.N),
+                          patch.object(SAT, "five_set_clauses",
+                                       return_value=iter(([], []))),
+                          patch.object(SAT, "comb", return_value=1),
+                          patch.object(SAT, "Solver", FakeSolver),
+                          redirect_stdout(output)):
+                        SAT.solve(args)
+                    record = json.loads(result_path.read_text())
+                self.assertIn(
+                    f"distinguished_cross_triple_bounds={state if cross_off == residual_off else 'disabled' if cross_off else 'enabled'}",
+                    output.getvalue())
+                residual_state = ("disabled" if residual_off else
+                                  "enabled" if j is not None and k is not None
+                                  else "not-applicable")
+                self.assertIn(f"residual_block_degree_bounds={residual_state}",
+                              output.getvalue())
+                for call in core_calls + verify_calls:
+                    self.assertEqual(
+                        call["enforce_distinguished_cross_triple_bounds"],
+                        cross_active)
+                    self.assertEqual(
+                        call["enforce_residual_block_degree_bounds"],
+                        residual_active)
+                self.assertEqual(record["distinguished_cross_triple_bounds"],
+                                 cross_active)
+                self.assertEqual(record["residual_block_degree_bounds"],
+                                 residual_active)
 
 
 if __name__ == "__main__":
