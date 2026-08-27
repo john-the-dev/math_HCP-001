@@ -24,9 +24,11 @@ struct Five {
 class Search {
  public:
   Search(uint64_t seed, double seconds, int noise_percent, int tenure,
-         int restart_after, const std::string& output)
+         int restart_after, int kick_min, int kick_max,
+         const std::string& output)
       : rng_(seed), seconds_(seconds), noise_percent_(noise_percent),
-        tenure_(tenure), restart_after_(restart_after), output_(output) {
+        tenure_(tenure), restart_after_(restart_after), kick_min_(kick_min),
+        kick_max_(kick_max), output_(output) {
     build_edges();
     build_fives();
     build_seed();
@@ -82,6 +84,8 @@ class Search {
   int noise_percent_;
   int tenure_;
   int restart_after_;
+  int kick_min_;
+  int kick_max_;
   std::string output_;
   std::array<std::array<int, N>, N> edge_id_{};
   std::array<std::pair<int, int>, M> endpoints_{};
@@ -186,7 +190,8 @@ class Search {
       seed_f_ = conflicts_.size();
       return;
     }
-    const int kick_moves = 8 + static_cast<int>(rng_() % 17);
+    const int kick_moves = kick_min_ +
+        static_cast<int>(rng_() % static_cast<uint64_t>(kick_max_ - kick_min_ + 1));
     for (int i = 0; i < kick_moves && !conflicts_.empty(); ++i) {
       const auto& q = fives_[conflicts_[rng_() % conflicts_.size()]];
       flip(q.edges[rng_() % 10]);
@@ -306,6 +311,8 @@ int main(int argc, char** argv) {
   int noise = 18;
   int tenure = 7;
   int restart_after = 20000;
+  int kick_min = 8;
+  int kick_max = 24;
   std::string output = "z43_solution.txt";
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
@@ -318,9 +325,15 @@ int main(int argc, char** argv) {
     else if (arg == "--noise") noise = std::stoi(next());
     else if (arg == "--tenure") tenure = std::stoi(next());
     else if (arg == "--restart-after") restart_after = std::stoi(next());
+    else if (arg == "--kick-min") kick_min = std::stoi(next());
+    else if (arg == "--kick-max") kick_max = std::stoi(next());
     else if (arg == "--output") output = next();
     else throw std::runtime_error("unknown argument: " + arg);
   }
-  Search search(seed, seconds, noise, tenure, restart_after, output);
+  if (kick_min < 0 || kick_max < kick_min || kick_max > M) {
+    throw std::runtime_error("kick range must satisfy 0 <= min <= max <= 903");
+  }
+  Search search(seed, seconds, noise, tenure, restart_after, kick_min,
+                kick_max, output);
   return search.run();
 }
