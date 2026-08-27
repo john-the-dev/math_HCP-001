@@ -184,6 +184,54 @@ Every j-only manifest row records the recomputed `edge_min` and `edge_max`
 even though `edges` is null. The manifest describes work to run; it does not
 claim that any partition is UNSAT or that proof artifacts currently exist.
 
+### Distinguished-B-vertex refinement
+
+The separate `j-k` frontier further splits every `(d,j)` case by the minimum
+internal degree `k` in `B`. After the distinguished A relabeling, all of `B`
+is still a symmetry block. Choose a minimum-internal-degree vertex of `B`,
+relabel it as vertex `d`, and relabel its `k` neighbors in `B` as
+`d+1..d+k`. The formula fixes that neighborhood and requires
+`deg_B(d) <= deg_B(b)` for every other `b in B`.
+
+Only permutations within the distinguished vertex's B-neighbor and
+B-nonneighbor blocks remain. The formula therefore removes the old global B
+degree ordering and sorts full H-degrees separately inside those two residual
+blocks. The existing A residual blocks remain unchanged. This gives every
+`Sym(A) x Sym(B)` orbit a representative without imposing an ordering across
+blocks that are no longer interchangeable.
+
+The default per-vertex B bound gives `k >= 28-d`. If `m=42-d` and `U_B` is
+the default upper bound on `|E(B)|`, minimum degree is at most average degree,
+so `k <= floor(2 U_B/m)=13` for all three values of `d`. The exhaustive ranges
+are therefore `10..13` for `d=18`, `9..13` for `d=19`, and `8..13` for
+`d=20`. Combined with every admissible `j`, this produces 193 cases: 56, 65,
+and 72 respectively.
+
+```sh
+python3 anchored_sat.py --write-manifest j_k_partition_manifest.json \
+  --manifest-mode j-k
+python3 verify_b_manifest.py j_k_partition_manifest.json
+python3 anchored_sat.py --degree 20 --a-internal-degree 2 \
+  --b-internal-degree 8 --solver cadical195 --json d20-j2-k8.json
+```
+
+`verify_b_manifest.py` recomputes the exact 193-case cover, bounds, IDs, and
+artifact names. Its optional completion-ledger path reuses the same fail-closed
+hash and exact `s VERIFIED` checks as the 39-case verifier. No manifest row is
+itself an UNSAT claim.
+
+Formula-construction measurements on the integration host (Python 3.12,
+`python-sat 1.9.dev15`) were medians of three runs with the block-edge,
+per-vertex block-degree, and pair common-set bounds all enabled:
+
+| case | core clauses | total clauses | encoded variables | build seconds |
+| --- | ---: | ---: | ---: | ---: |
+| d20-j2-k8 | 890,223 | 2,591,559 | 445,569 | 0.513 |
+| d20-j2-k13 | 890,223 | 2,591,559 | 445,569 | 0.521 |
+
+These measurements include the global 5-set clauses only in the total-clause
+column. They exclude solving and make no SAT or UNSAT claim.
+
 ### Exact A-block edge partitions
 
 `--a-edges` fixes `E(A)` while leaving the total edge count unfixed. It is
