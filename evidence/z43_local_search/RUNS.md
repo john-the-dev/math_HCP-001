@@ -57,3 +57,24 @@ Both outputs equal the starting graph and have SHA-256
 
 These longer timeouts are still only negative search observations, not an
 exclusion theorem.
+
+## Two 2-hour runs
+
+Two further runs tested opposite noise/tabu regimes:
+
+```sh
+/usr/bin/time -l /tmp/z43_tabu --seed 307 --seconds 7200 --noise 50 \
+  --tenure 3 --restart-after 10000 --output /tmp/z43-seed307-7200.txt
+/usr/bin/time -l /tmp/z43_tabu --seed 401 --seconds 7200 --noise 5 \
+  --tenure 20 --restart-after 5000 --output /tmp/z43-seed401-7200.txt
+```
+
+Seed 307 completed 3,918,008 moves and 391 restarts; seed 401 completed
+3,284,072 moves and 656 restarts. Both ran for 7,200 seconds and found no
+state below `F=2`. The independent verifier enumerated all 962,598 five-sets
+in each output and reported `K5=0`, `I5=2`, `F=2`. Both outputs again equal
+the starting graph and have SHA-256
+`b13c0207149ff618acef13c822a4841ef21d60782dd40b94317887ad2d28beec`.
+
+These runs are heuristic search observations only and make no exclusion
+claim.
