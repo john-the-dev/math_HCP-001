@@ -4,6 +4,7 @@
 import hashlib
 import itertools
 import unittest
+from pathlib import Path
 
 import exact_local_repair as repair
 
@@ -45,6 +46,15 @@ class ExactLocalRepairTest(unittest.TestCase):
         self.assertEqual(len(second), 10)
         self.assertTrue(all(literal < 0 for literal in first))
         self.assertTrue(all(literal > 0 for literal in second))
+
+    def test_all_preserved_checker_transcripts_are_verified(self):
+        logs = Path(__file__).with_name("verification_logs")
+        self.assertEqual(
+            [path.name for path in sorted(logs.glob("*.log"))],
+            [f"r{radius}.drat-trim.log" for radius in range(1, 9)],
+        )
+        for path in logs.glob("*.log"):
+            self.assertIn("\ns VERIFIED\n", path.read_text())
 
 
 if __name__ == "__main__":

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 4 ]]; then
-  echo "usage: $0 RADIUS OUTPUT_DIR CADICAL DRAT_TRIM" >&2
+if [[ $# -lt 4 || $# -gt 5 ]]; then
+  echo "usage: $0 RADIUS OUTPUT_DIR CADICAL DRAT_TRIM [binary|ascii]" >&2
   exit 2
 fi
 
@@ -10,6 +10,15 @@ radius="$1"
 output_dir="$2"
 cadical="$3"
 drat_trim="$4"
+proof_format="${5:-binary}"
+if [[ "$proof_format" == binary ]]; then
+  proof_option="--binary=true"
+elif [[ "$proof_format" == ascii ]]; then
+  proof_option="--binary=false"
+else
+  echo "proof format must be binary or ascii" >&2
+  exit 2
+fi
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$output_dir"
 prefix="$output_dir/z43-local-r$radius"
@@ -18,7 +27,8 @@ python3 "$script_dir/exact_local_repair.py" build \
   --radius "$radius" --output "$prefix.cnf" --metadata "$prefix.json"
 
 set +e
-"$cadical" --seed=0 --checkproof=3 -t 900 "$prefix.cnf" "$prefix.drat" \
+"$cadical" --seed=0 --checkproof=3 "$proof_option" -t 900 \
+  "$prefix.cnf" "$prefix.drat" \
   > "$prefix.cadical.log" 2>&1
 solver_status=$?
 set -e
