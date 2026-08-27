@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Verify complete agreement between the two recorded K14 implementations."""
+"""Verify consistency and count agreement of two recorded K14 replays."""
 from csv import DictReader
 from decimal import Decimal
+from hashlib import sha256
 from pathlib import Path
 
 from replay_published import (EMPTY_SHA256, IMPLEMENTATION, MODE, digest,
@@ -14,6 +15,25 @@ INTMASK_IMPLEMENTATION = "independent_intmask_dedupe_maxincidence"
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def verify_manifest_entry(manifest_path, expected_name, expected_path):
+    entries = {}
+    for number, line in enumerate(manifest_path.read_text().splitlines(), 1):
+        parts = line.split("  ", 1)
+        require(len(parts) == 2, f"bad checksum line {number}")
+        checksum, name = parts
+        require(len(checksum) == 64 and all(c in "0123456789abcdef"
+                                               for c in checksum),
+                f"bad checksum on line {number}")
+        require(name not in entries, f"duplicate checksum entry: {name}")
+        entries[name] = checksum
+    require(expected_name in entries,
+            f"checksum manifest lacks {expected_name}")
+    actual = sha256(expected_path.read_bytes()).hexdigest()
+    require(entries[expected_name] == actual,
+            f"checksum mismatch for {expected_name}")
+    return actual
 
 
 def main():
@@ -29,6 +49,8 @@ def main():
 
     table_path = repo_root / "evidence" / "k14_independent" \
         / "anchor-results.tsv"
+    intmask_sha = verify_manifest_entry(
+        table_path.parent / "SHA256SUMS", table_path.name, table_path)
     with table_path.open(newline="") as handle:
         rows = [row for row in DictReader(handle, delimiter="\t")
                 if row["distance"] != "TOTAL"]
@@ -58,13 +80,14 @@ def main():
     runtime = sum(Decimal(str(record["runtime_seconds"]))
                   for record in published.values())
     print(f"published_source_sha256={source_sha}")
+    print(f"independent_results_sha256={intmask_sha}")
     print("implementations=published_tuple_frozenset,"
           "independent_intmask_dedupe_maxincidence")
     print("distances=2..21 anchors=20")
     print("under_target_agreement=20/20 all_zero=True")
     print("target_size_agreement=20/20 all_zero=True")
     print(f"published_total_states={states} runtime_seconds={runtime}")
-    print("DUAL_REPLAY=PASS")
+    print("RECORDED_DUAL_REPLAY=PASS")
 
 
 if __name__ == "__main__":

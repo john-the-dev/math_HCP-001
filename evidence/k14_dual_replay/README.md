@@ -24,19 +24,27 @@ The final verifier intentionally fails on a partial ledger:
 python3 verify_dual.py
 ```
 
-`DUAL_REPLAY=PASS` means all distances `2..21` occur exactly once and both
-implementations agree on their separate under-target and target-size survivor
-counts. This is a cyclic-template result only; it does not exclude arbitrary
-43-vertex Ramsey graphs.
+`RECORDED_DUAL_REPLAY=PASS` means the verifier authenticated the published
+source and independent results table, found every distance `2..21` exactly
+once, and confirmed agreement of the two recorded under-target and target-size
+survivor counts. It checks recorded-artifact consistency; it does not execute
+either search. Empty-survivor digests bind the published records' schema but
+add no cross-implementation evidence once the counts are zero. This is a
+cyclic-template result only; it does not exclude arbitrary 43-vertex Ramsey
+graphs.
 
 The completed replay explored 18,644,084 published-implementation states in
 4,926.29 seconds. The independent integer-mask run explored 18,101,717 states
 in 4,713.16 seconds. Both found zero under-target and zero target-size
 survivors for every anchor; internal state totals are not expected to match.
+Their differing state totals are evidence that the searches use materially
+different traversals: for example, at distance 2 the published implementation
+explored 236,233 states while the independent implementation explored 175,716,
+and both found zero survivors.
 
 ```text
 distances=2..21 anchors=20
 under_target_agreement=20/20 all_zero=True
 target_size_agreement=20/20 all_zero=True
-DUAL_REPLAY=PASS
+RECORDED_DUAL_REPLAY=PASS
 ```
