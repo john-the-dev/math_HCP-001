@@ -1,0 +1,8 @@
+python=3.12.14 bounds=on memo=on
+mode=up_to_k
+target_k=13
+under_target_hits=0
+target_size_hits=0
+total_survivors=0
+unique_states=6311447
+runtime_seconds=1058.22

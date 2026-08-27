@@ -5,9 +5,9 @@ editable; this file is versioned and hashed.
 
 ## Theorem boundary
 
-The generalized mutual-obligation search finds no survivor using at most 12
+The generalized mutual-obligation search finds no survivor using at most 13
 non-cycle toggles for the tested cyclic-template instance, under `up_to_k`
-semantics. Any survivor in this model therefore requires at least 13 non-cycle
+semantics. Any survivor in this model therefore requires at least 14 non-cycle
 toggles.
 
 This is a template-boundary result. It does **not prove that no valid
@@ -81,7 +81,30 @@ K11     zero; independent bounds+memo replay;
         relies on pruning lemmas and memo argument
 K12     zero; independent bounds+memo replay;
         relies on pruning lemmas and memo argument
+K13     zero; bounds+memo replay, this implementation only;
+        relies on pruning lemmas and memo argument; NOT independently reproduced
 ```
+
+### K13 (added after the K4–K12 packet merged)
+
+```text
+python=3.12.14 bounds=on memo=on
+mode=up_to_k
+target_k=13
+under_target_hits=0
+target_size_hits=0
+total_survivors=0
+unique_states=6311447
+runtime_seconds=1058.22
+
+command: python3 z_general_memo.py --k 13 --bounds on --memo on
+seed:    none / deterministic
+capture: k13_run.out
+```
+
+K13 differs from K4–K12 in one way that matters: **no second implementation has
+reproduced it.** K4–K12 carry independent survivor-set agreement; K13 is this
+implementation alone. It is reported at that lower strength deliberately.
 
 State counts differ between implementations and are **work metrics, not
 outcomes**: they depend on branching order and memoization. Canonical survivor
