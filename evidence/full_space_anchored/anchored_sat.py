@@ -146,6 +146,28 @@ def global_pair_common_clauses(pool):
     return clauses
 
 
+def distinguished_cross_triple_clauses(degree, a_internal_degree,
+                                       b_internal_degree, pool):
+    """Encode opposite-block bounds for triples fixed by j and k."""
+    clauses = []
+    distinguished_a = 0
+    distinguished_b = degree
+    a_neighbors = range(1, a_internal_degree + 1)
+    b_nonneighbors = range(
+        distinguished_b + b_internal_degree + 1, N)
+    for u, v in combinations(a_neighbors, 2):
+        clauses.extend(_conditional_conjunction_atmost(
+            ((edge_var(distinguished_a, w), edge_var(u, w),
+              edge_var(v, w)) for w in range(degree, N)),
+            3, edge_var(u, v), pool))
+    for u, v in combinations(b_nonneighbors, 2):
+        clauses.extend(_conditional_conjunction_atmost(
+            ((-edge_var(distinguished_b, w), -edge_var(u, w),
+              -edge_var(v, w)) for w in range(degree)),
+            3, -edge_var(u, v), pool))
+    return clauses
+
+
 def block_edge_clauses(degree, pool, a_edge_count=None):
     clauses = []
     for index, (edges, (minimum, maximum)) in enumerate(zip(
@@ -188,7 +210,8 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
                  enforce_block_pair_common_bounds=True,
                  b_internal_degree=None,
                  enforce_global_pair_common_bounds=True,
-                 a_total_degree=None):
+                 a_total_degree=None,
+                 enforce_distinguished_cross_triple_bounds=True):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
@@ -295,6 +318,12 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
         for u, w in zip(block, block[1:]):
             clauses.extend(degree_leq_clauses(u, w, pool))
 
+    if (enforce_distinguished_cross_triple_bounds
+            and a_internal_degree is not None
+            and b_internal_degree is not None):
+        clauses.extend(distinguished_cross_triple_clauses(
+            degree, a_internal_degree, b_internal_degree, pool))
+
     edges = list(EDGE_VAR.values())
     if edge_count is None:
         clauses.extend(CardEnc.atmost(
@@ -393,6 +422,38 @@ def verify_global_pair_common_bounds(adjacency):
     return maxima
 
 
+def verify_distinguished_cross_triple_bounds(
+        adjacency, degree, a_internal_degree, b_internal_degree):
+    maxima = {"distinguished_a_cross_common_neighbors": 0,
+              "distinguished_b_cross_common_nonneighbors": 0}
+    distinguished_a = 0
+    distinguished_b = degree
+    for u, v in combinations(range(1, a_internal_degree + 1), 2):
+        if ((adjacency[u] >> v) & 1
+                and (adjacency[distinguished_a] >> u) & 1
+                and (adjacency[distinguished_a] >> v) & 1):
+            count = sum(all((adjacency[x] >> w) & 1
+                            for x in (distinguished_a, u, v))
+                        for w in range(degree, N))
+            require(count <= 3,
+                    "distinguished A triple common-set bound violated")
+            maxima["distinguished_a_cross_common_neighbors"] = max(
+                maxima["distinguished_a_cross_common_neighbors"], count)
+    start = distinguished_b + b_internal_degree + 1
+    for u, v in combinations(range(start, N), 2):
+        if (not ((adjacency[u] >> v) & 1)
+                and not ((adjacency[distinguished_b] >> u) & 1)
+                and not ((adjacency[distinguished_b] >> v) & 1)):
+            count = sum(all(not ((adjacency[x] >> w) & 1)
+                            for x in (distinguished_b, u, v))
+                        for w in range(degree))
+            require(count <= 3,
+                    "distinguished B triple common-set bound violated")
+            maxima["distinguished_b_cross_common_nonneighbors"] = max(
+                maxima["distinguished_b_cross_common_nonneighbors"], count)
+    return maxima
+
+
 def verify_distinguished_a(adjacency, degree, a_internal_degree,
                            a_total_degree=None, degrees=None):
     j = a_internal_degree
@@ -446,7 +507,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
                  enforce_block_pair_common_bounds=True,
                  b_internal_degree=None,
                  enforce_global_pair_common_bounds=True,
-                 a_total_degree=None):
+                 a_total_degree=None,
+                 enforce_distinguished_cross_triple_bounds=True):
     if a_total_degree is not None:
         require(a_internal_degree is not None,
                 "A-total degree requires A-internal degree")
@@ -496,6 +558,12 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
     else:
         verify_distinguished_b(
             adjacency, degree, b_internal_degree, degrees)
+    distinguished_triples = None
+    if (enforce_distinguished_cross_triple_bounds
+            and a_internal_degree is not None
+            and b_internal_degree is not None):
+        distinguished_triples = verify_distinguished_cross_triple_bounds(
+            adjacency, degree, a_internal_degree, b_internal_degree)
 
     for vertices in combinations(range(degree), 4):
         require(not all((adjacency[u] >> v) & 1
@@ -518,6 +586,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
         result.update(pair_common)
     if global_pair_common is not None:
         result.update(global_pair_common)
+    if distinguished_triples is not None:
+        result.update(distinguished_triples)
     return result
 
 
@@ -544,7 +614,9 @@ def solve(args):
         b_internal_degree=args.b_internal_degree,
         enforce_global_pair_common_bounds=(
             not args.no_global_pair_common_bounds),
-        a_total_degree=args.a_total_degree)
+        a_total_degree=args.a_total_degree,
+        enforce_distinguished_cross_triple_bounds=(
+            not args.no_distinguished_cross_triple_bounds))
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -564,6 +636,8 @@ def solve(args):
           f"{'disabled' if args.no_block_pair_common_bounds else 'enabled'}")
     print("global_pair_common_bounds="
           f"{'disabled' if args.no_global_pair_common_bounds else 'enabled'}")
+    print("distinguished_cross_triple_bounds="
+          f"{'disabled' if args.no_distinguished_cross_triple_bounds else 'enabled'}")
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,
@@ -586,6 +660,8 @@ def solve(args):
             "block_degree_bounds": not args.no_block_degree_bounds,
             "block_pair_common_bounds": not args.no_block_pair_common_bounds,
             "global_pair_common_bounds": not args.no_global_pair_common_bounds,
+            "distinguished_cross_triple_bounds": (
+                not args.no_distinguished_cross_triple_bounds),
             "solver": args.solver,
             "result": result,
             "vars": top,
@@ -610,7 +686,9 @@ def solve(args):
                 b_internal_degree=args.b_internal_degree,
                 enforce_global_pair_common_bounds=(
                     not args.no_global_pair_common_bounds),
-                a_total_degree=args.a_total_degree)
+                a_total_degree=args.a_total_degree,
+                enforce_distinguished_cross_triple_bounds=(
+                    not args.no_distinguished_cross_triple_bounds))
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
@@ -747,6 +825,9 @@ def main():
     parser.add_argument(
         "--no-global-pair-common-bounds", action="store_true",
         help="disable sound whole-H pair common-set bounds for diagnostics")
+    parser.add_argument(
+        "--no-distinguished-cross-triple-bounds", action="store_true",
+        help="disable distinguished cross-block triple bounds for diagnostics")
     parser.add_argument("--solver", default="cadical195")
     parser.add_argument("--cnf")
     parser.add_argument("--proof")

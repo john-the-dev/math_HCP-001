@@ -289,6 +289,37 @@ same integration host. The global 1,701,336 five-set clauses are not included
 in those core counts. This is a formula-construction comparison, not a solver
 benchmark or a SAT/UNSAT claim.
 
+### Distinguished cross-block triple cuts
+
+When both `j` and `k` are fixed, the two distinguished vertices give two
+additional necessary implications. Let `a=0`, let `A+={1,...,j}` be its fixed
+neighbors in `A`, let `b=d`, and let
+`B-={d+k+1,...,41}` be its fixed nonneighbors in `B`.
+
+For each edge `uv` inside `A+`, the vertices `{a,u,v}` form a triangle. At
+most three vertices of `B` can be adjacent to all three: an edge among four
+such vertices would complete a K5, while no edge among them would be an I4 in
+`B` and would complete an I5 with the omitted anchor. Dually, for each nonedge
+`uv` inside `B-`, `{b,u,v}` is an independent triple. At most three vertices
+of `A` can be nonadjacent to all three: a nonedge among four would complete an
+I5, while all six edges would be a K4 in `A` and would complete a K5 with the
+omitted anchor.
+
+The implementation uses guarded projected-conjunction counters and covers
+every eligible pair in the fixed residual blocks. The cuts are enabled by
+default whenever both `--a-internal-degree` and `--b-internal-degree` are
+present; `--no-distinguished-cross-triple-bounds` is a diagnostic opt-out.
+They depend on the global K5/I5 clauses together with the A-K4/B-I4 clauses,
+so they cannot support a verdict for `core_clauses()` in isolation. They add
+no partition axis: all 193 `j-k` cases and all 1,142 `j-t-k` cases remain the
+same exhaustive covers.
+
+On the integration host, enabling these cuts on top of the whole-`H` pair
+cuts changed the `d20-j2-k8` core from 1,613,463 clauses / 757,251 variables
+to 1,624,223 clauses / 762,868 variables. The global 1,701,336 five-set
+clauses are excluded. This is a deterministic construction count, not a
+solver benchmark or a SAT/UNSAT claim.
+
 ### Exact A-block edge partitions
 
 `--a-edges` fixes `E(A)` while leaving the total edge count unfixed. It is
