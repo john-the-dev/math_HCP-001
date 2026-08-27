@@ -1,0 +1,360 @@
+{
+  "schema": 1,
+  "vertex_count": 43,
+  "mode": "j-only",
+  "coverage": "d in {18,19,20}; j is the A-internal degree of a chosen minimum-degree vertex of A; H edge count is not fixed, with the degree-implied lower bound and |E(H)| <= 451-d enforced inside each formula",
+  "partition_count": 39,
+  "partitions": [
+    {
+      "id": "d18-j0",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 0,
+      "cnf": "d18-j0.cnf",
+      "proof": "d18-j0.drat",
+      "result": "d18-j0.json"
+    },
+    {
+      "id": "d18-j1",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 1,
+      "cnf": "d18-j1.cnf",
+      "proof": "d18-j1.drat",
+      "result": "d18-j1.json"
+    },
+    {
+      "id": "d18-j2",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 2,
+      "cnf": "d18-j2.cnf",
+      "proof": "d18-j2.drat",
+      "result": "d18-j2.json"
+    },
+    {
+      "id": "d18-j3",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 3,
+      "cnf": "d18-j3.cnf",
+      "proof": "d18-j3.drat",
+      "result": "d18-j3.json"
+    },
+    {
+      "id": "d18-j4",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 4,
+      "cnf": "d18-j4.cnf",
+      "proof": "d18-j4.drat",
+      "result": "d18-j4.json"
+    },
+    {
+      "id": "d18-j5",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 5,
+      "cnf": "d18-j5.cnf",
+      "proof": "d18-j5.drat",
+      "result": "d18-j5.json"
+    },
+    {
+      "id": "d18-j6",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 6,
+      "cnf": "d18-j6.cnf",
+      "proof": "d18-j6.drat",
+      "result": "d18-j6.json"
+    },
+    {
+      "id": "d18-j7",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 7,
+      "cnf": "d18-j7.cnf",
+      "proof": "d18-j7.drat",
+      "result": "d18-j7.json"
+    },
+    {
+      "id": "d18-j8",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 8,
+      "cnf": "d18-j8.cnf",
+      "proof": "d18-j8.drat",
+      "result": "d18-j8.json"
+    },
+    {
+      "id": "d18-j9",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 9,
+      "cnf": "d18-j9.cnf",
+      "proof": "d18-j9.drat",
+      "result": "d18-j9.json"
+    },
+    {
+      "id": "d18-j10",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 10,
+      "cnf": "d18-j10.cnf",
+      "proof": "d18-j10.drat",
+      "result": "d18-j10.json"
+    },
+    {
+      "id": "d18-j11",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 11,
+      "cnf": "d18-j11.cnf",
+      "proof": "d18-j11.drat",
+      "result": "d18-j11.json"
+    },
+    {
+      "id": "d18-j12",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 12,
+      "cnf": "d18-j12.cnf",
+      "proof": "d18-j12.drat",
+      "result": "d18-j12.json"
+    },
+    {
+      "id": "d18-j13",
+      "degree": 18,
+      "edges": null,
+      "a_internal_degree": 13,
+      "cnf": "d18-j13.cnf",
+      "proof": "d18-j13.drat",
+      "result": "d18-j13.json"
+    },
+    {
+      "id": "d19-j1",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 1,
+      "cnf": "d19-j1.cnf",
+      "proof": "d19-j1.drat",
+      "result": "d19-j1.json"
+    },
+    {
+      "id": "d19-j2",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 2,
+      "cnf": "d19-j2.cnf",
+      "proof": "d19-j2.drat",
+      "result": "d19-j2.json"
+    },
+    {
+      "id": "d19-j3",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 3,
+      "cnf": "d19-j3.cnf",
+      "proof": "d19-j3.drat",
+      "result": "d19-j3.json"
+    },
+    {
+      "id": "d19-j4",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 4,
+      "cnf": "d19-j4.cnf",
+      "proof": "d19-j4.drat",
+      "result": "d19-j4.json"
+    },
+    {
+      "id": "d19-j5",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 5,
+      "cnf": "d19-j5.cnf",
+      "proof": "d19-j5.drat",
+      "result": "d19-j5.json"
+    },
+    {
+      "id": "d19-j6",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 6,
+      "cnf": "d19-j6.cnf",
+      "proof": "d19-j6.drat",
+      "result": "d19-j6.json"
+    },
+    {
+      "id": "d19-j7",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 7,
+      "cnf": "d19-j7.cnf",
+      "proof": "d19-j7.drat",
+      "result": "d19-j7.json"
+    },
+    {
+      "id": "d19-j8",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 8,
+      "cnf": "d19-j8.cnf",
+      "proof": "d19-j8.drat",
+      "result": "d19-j8.json"
+    },
+    {
+      "id": "d19-j9",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 9,
+      "cnf": "d19-j9.cnf",
+      "proof": "d19-j9.drat",
+      "result": "d19-j9.json"
+    },
+    {
+      "id": "d19-j10",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 10,
+      "cnf": "d19-j10.cnf",
+      "proof": "d19-j10.drat",
+      "result": "d19-j10.json"
+    },
+    {
+      "id": "d19-j11",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 11,
+      "cnf": "d19-j11.cnf",
+      "proof": "d19-j11.drat",
+      "result": "d19-j11.json"
+    },
+    {
+      "id": "d19-j12",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 12,
+      "cnf": "d19-j12.cnf",
+      "proof": "d19-j12.drat",
+      "result": "d19-j12.json"
+    },
+    {
+      "id": "d19-j13",
+      "degree": 19,
+      "edges": null,
+      "a_internal_degree": 13,
+      "cnf": "d19-j13.cnf",
+      "proof": "d19-j13.drat",
+      "result": "d19-j13.json"
+    },
+    {
+      "id": "d20-j2",
+      "degree": 20,
+      "edges": null,
+      "a_internal_degree": 2,
+      "cnf": "d20-j2.cnf",
+      "proof": "d20-j2.drat",
+      "result": "d20-j2.json"
+    },
+    {
+      "id": "d20-j3",
+      "degree": 20,
+      "edges": null,
+      "a_internal_degree": 3,
+      "cnf": "d20-j3.cnf",
+      "proof": "d20-j3.drat",
+      "result": "d20-j3.json"
+    },
+    {
+      "id": "d20-j4",
+      "degree": 20,
+      "edges": null,
+      "a_internal_degree": 4,
+      "cnf": "d20-j4.cnf",
+      "proof": "d20-j4.drat",
+      "result": "d20-j4.json"
+    },
+    {
+      "id": "d20-j5",
+      "degree": 20,
+      "edges": null,
+      "a_internal_degree": 5,
+      "cnf": "d20-j5.cnf",
+      "proof": "d20-j5.drat",
+      "result": "d20-j5.json"
+    },
+    {
+      "id": "d20-j6",
+      "degree": 20,
+      "edges": null,
+      "a_internal_degree": 6,
+      "cnf": "d20-j6.cnf",
+      "proof": "d20-j6.drat",
+      "result": "d20-j6.json"
+    },
+    {
+      "id": "d20-j7",
+      "degree": 20,
+      "edges": null,
+      "a_internal_degree": 7,
+      "cnf": "d20-j7.cnf",
+      "proof": "d20-j7.drat",
+      "result": "d20-j7.json"
+    },
+    {
+      "id": "d20-j8",
+      "degree": 20,
+      "edges": null,
+      "a_internal_degree": 8,
+      "cnf": "d20-j8.cnf",
+      "proof": "d20-j8.drat",
+      "result": "d20-j8.json"
+    },
+    {
+      "id": "d20-j9",
+      "degree": 20,
+      "edges": null,
+      "a_internal_degree": 9,
+      "cnf": "d20-j9.cnf",
+      "proof": "d20-j9.drat",
+      "result": "d20-j9.json"
+    },
+    {
+      "id": "d20-j10",
+      "degree": 20,
+      "edges": null,
+      "a_internal_degree": 10,
+      "cnf": "d20-j10.cnf",
+      "proof": "d20-j10.drat",
+      "result": "d20-j10.json"
+    },
+    {
+      "id": "d20-j11",
+      "degree": 20,
+      "edges": null,
+      "a_internal_degree": 11,
+      "cnf": "d20-j11.cnf",
+      "proof": "d20-j11.drat",
+      "result": "d20-j11.json"
+    },
+    {
+      "id": "d20-j12",
+      "degree": 20,
+      "edges": null,
+      "a_internal_degree": 12,
+      "cnf": "d20-j12.cnf",
+      "proof": "d20-j12.drat",
+      "result": "d20-j12.json"
+    },
+    {
+      "id": "d20-j13",
+      "degree": 20,
+      "edges": null,
+      "a_internal_degree": 13,
+      "cnf": "d20-j13.cnf",
+      "proof": "d20-j13.drat",
+      "result": "d20-j13.json"
+    }
+  ]
+}

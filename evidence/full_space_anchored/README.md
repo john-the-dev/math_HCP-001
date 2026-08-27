@@ -52,8 +52,7 @@ follow by summing the per-vertex degree lower bounds.
 
 ## Distinguished-A-vertex refinement
 
-Each edge-count partition can be divided further with
-`--a-internal-degree j`. Choose a minimum-degree vertex of `A`, relabel it as
+Choose a minimum-degree vertex of `A`, relabel it as
 vertex 0, and relabel its `j` neighbors in `A` as vertices `1..j`. The formula
 fixes those incident edges, requires `deg_H(0) <= deg_H(a)` for every other
 `a in A`, and sorts degrees only within the three residual symmetry blocks:
@@ -65,7 +64,21 @@ The exact Ramsey values `R(3,5)=14` and `R(4,4)=18` restrict `j`: the
 neighbors of vertex 0 inside `A` avoid K3/I5, while its nonneighbors inside
 `A` avoid K4/I4. Thus `max(0,d-18) <= j <= 13`.
 
-Generate the exhaustive `(d, edge_count, j)` manifest (1,733 partitions):
+The practical proof frontier partitions only by `(d,j)`. Omitting `--edges`
+does not omit the edge bounds: the per-vertex degree constraints imply
+`|E(H)| >= ceil(41d/2)`, and every formula explicitly enforces
+`|E(H)| <= 451-d`. Consequently these 39 formulas cover every admissible edge
+count and remain exhaustive:
+
+```sh
+python3 anchored_sat.py --write-manifest j_partition_manifest.json \
+  --manifest-mode j-only
+python3 anchored_sat.py --degree 20 --a-internal-degree 2 \
+  --solver cadical195 --json d20-j2.json
+```
+
+For smaller proof jobs, `(d,edge_count,j)` further divides the same space into
+1,733 formulas. Generate that exhaustive manifest with:
 
 ```sh
 python3 anchored_sat.py --write-manifest partition_manifest.json

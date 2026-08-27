@@ -1,7 +1,8 @@
 {
   "schema": 1,
   "vertex_count": 43,
-  "coverage": "d in {18,19,20}; every admissible H edge count; j is the A-internal degree of a chosen minimum-degree vertex of A",
+  "mode": "edge-j",
+  "coverage": "d in {18,19,20}; j is the A-internal degree of a chosen minimum-degree vertex of A; every admissible H edge count is fixed",
   "partition_count": 1733,
   "partitions": [
     {

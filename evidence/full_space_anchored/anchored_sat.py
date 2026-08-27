@@ -230,29 +230,40 @@ def solve(args):
         print(json.dumps(record, sort_keys=True))
 
 
-def write_manifest(path):
+def write_manifest(path, mode):
     partitions = []
     for degree in (18, 19, 20):
         minimum, maximum = edge_bounds(degree)
         minimum_j, maximum_j = a_internal_bounds(degree)
-        for edge_count in range(minimum, maximum + 1):
-            for j in range(minimum_j, maximum_j + 1):
-                key = f"d{degree}-e{edge_count}-j{j}"
-                partitions.append({
-                    "id": key,
-                    "degree": degree,
-                    "edges": edge_count,
-                    "a_internal_degree": j,
-                    "cnf": f"{key}.cnf",
-                    "proof": f"{key}.drat",
-                    "result": f"{key}.json",
-                })
+        if mode == "edge-j":
+            axes = ((edge_count, j)
+                    for edge_count in range(minimum, maximum + 1)
+                    for j in range(minimum_j, maximum_j + 1))
+        else:
+            axes = ((None, j) for j in range(minimum_j, maximum_j + 1))
+        for edge_count, j in axes:
+            edge_part = f"-e{edge_count}" if edge_count is not None else ""
+            key = f"d{degree}{edge_part}-j{j}"
+            partitions.append({
+                "id": key,
+                "degree": degree,
+                "edges": edge_count,
+                "a_internal_degree": j,
+                "cnf": f"{key}.cnf",
+                "proof": f"{key}.drat",
+                "result": f"{key}.json",
+            })
     manifest = {
         "schema": 1,
         "vertex_count": 43,
+        "mode": mode,
         "coverage": (
-            "d in {18,19,20}; every admissible H edge count; j is the "
-            "A-internal degree of a chosen minimum-degree vertex of A"
+            "d in {18,19,20}; j is the A-internal degree of a chosen "
+            "minimum-degree vertex of A; "
+            + ("every admissible H edge count is fixed"
+               if mode == "edge-j" else
+               "H edge count is not fixed, with the degree-implied lower "
+               "bound and |E(H)| <= 451-d enforced inside each formula")
         ),
         "partition_count": len(partitions),
         "partitions": partitions,
@@ -272,9 +283,11 @@ def main():
     parser.add_argument("--json")
     parser.add_argument("--list-partitions", action="store_true")
     parser.add_argument("--write-manifest")
+    parser.add_argument("--manifest-mode", choices=("edge-j", "j-only"),
+                        default="edge-j")
     args = parser.parse_args()
     if args.write_manifest:
-        write_manifest(args.write_manifest)
+        write_manifest(args.write_manifest, args.manifest_mode)
         return
     if args.list_partitions:
         for degree in (18, 19, 20):
