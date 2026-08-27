@@ -29,7 +29,7 @@ for radius in 1 2 3 4; do
   ./run_exact_local_repair.sh "$radius" /tmp/z43-local \
     "$(command -v cadical)" /path/to/drat-trim ascii
 done
-for radius in 5 6 7 8 9; do
+for radius in 5 6 7 8 9 10; do
   ./run_exact_local_repair.sh "$radius" /tmp/z43-local \
     "$(command -v cadical)" /path/to/drat-trim binary
 done
@@ -44,15 +44,15 @@ decode` and audit the graph with the pre-existing independent
 
 ## Results
 
-The bounded experiment now reaches radius 9. Radius 9 logically subsumes radii
-1--8: these are one nested exclusion checked at nine bounds, not nine
-independent assurances. The result rests on the radius-9 proof together with
+The bounded experiment now reaches radius 10. Radius 10 logically subsumes
+radii 1--9: these are one nested exclusion checked at ten bounds, not ten
+independent assurances. The result rests on the radius-10 proof together with
 direct audit of the shared encoding; the smaller bounds are reproducibility
 and scaling checkpoints only.
 All solver times below are real seconds reported by CaDiCaL. Hashes bind both
 the generated CNF and the exact proof instance checked in this run; large
 transient artifacts were not committed. Radii 1--4 used ASCII DRAT and radii
-5--9 used binary DRAT. CaDiCaL proof traces are not canonical: proof format,
+5--10 used binary DRAT. CaDiCaL proof traces are not canonical: proof format,
 solver version/options, and some execution details can change proof bytes while
 leaving the deterministic CNF unchanged. Reproduction therefore requires
 rechecking the newly generated proof rather than expecting its hash to equal a
@@ -74,6 +74,7 @@ proofs or checker logs, even when their proof checks succeed.
 | 7 | binary | 7,224 | 1,938,685 | 81.62 | `e9022858ae3b3eeb39eb76888fa5980b845ac284ddd363f20d6744852b62f784` | `b80373400fdd8821be31e9994c914f1ac3752fa162b97d9f8c2db4138e135eaf` |
 | 8 | binary | 8,127 | 1,940,475 | 137.16 | `9fac70649980dd0f757a879bfadd6fa5f68dff0e740d3f8d5e0c5cb2083a3c73` | `e43a0282f1d34f74e2486100d41adc9e3e6edce5322de9b6691fdf796552f12d` |
 | 9 | binary | 9,030 | 1,942,263 | 258.91 | `ffc36a6a4ddec53a415d38a77a9f7bd4d231d117fe1f6d86994648369f2c6f62` | `ee0202de75e58025f304f52e62e085e9eca2a6713b4ce8bfabdb95931d05a650` |
+| 10 | binary | 9,933 | 1,944,049 | 564.31 | `7eac77809d7b935f944fb1b702070cdc7ee6039a5f55674f955f275c2c5c3f12` | `0d49d765d26559f30520e76f8145e1f13413a2a5518ab3ada000152392ad8233` |
 
 The checker exited 0 at every radius. Raw output hashes bind the exact terminal
 streams; readable transcripts under `verification_logs/` remove terminal
@@ -91,6 +92,7 @@ the substantive lines. Each transcript reports `s VERIFIED`.
 | 7 | 0 | `7004311fb1a204efda45eeedefbb7b158cea0122b8b30e3049604c72f162069d` |
 | 8 | 0 | `a9b933d18485596e0c93fafbe759061c712e2cb71eb048ecacaf5a1783ea7345` |
 | 9 | 0 | `861456b7a876d2c436ea14993aa833c65b6d5a97112d44d224f08bacae788bb8` |
+| 10 | 0 | `4b25a08a03013fe413e7e977feeca579b2d9e7b2243e85f89bd57d8592f8026d` |
 
 The exact conclusion is: no `(5,5)`-avoiding graph on labeled vertices
-`0..42` differs in at most nine edge positions from this exact seed.
+`0..42` differs in at most ten edge positions from this exact seed.
