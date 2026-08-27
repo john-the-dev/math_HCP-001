@@ -35,6 +35,18 @@ def configured_bound_state(disabled, applicable):
     return "enabled" if applicable else "not-applicable"
 
 
+def configured_side_bound_state(disabled, a_applicable, b_applicable):
+    if disabled:
+        return "disabled"
+    if a_applicable and b_applicable:
+        return "enabled-both"
+    if a_applicable:
+        return "enabled-a"
+    if b_applicable:
+        return "enabled-b"
+    return "not-applicable"
+
+
 def edge_var(u, v):
     return EDGE_VAR[(u, v) if u < v else (v, u)]
 
@@ -190,6 +202,44 @@ def distinguished_cross_triple_clauses(degree, a_internal_degree,
     return clauses
 
 
+def distinguished_cross_pair_degree_clauses(
+        degree, a_internal_degree, b_internal_degree, pool):
+    """Encode internal-degree bounds in distinguished cross common sets."""
+    clauses = []
+    if a_internal_degree is not None:
+        distinguished_a = 0
+        for u in range(1, a_internal_degree + 1):
+            for w in range(degree, N):
+                condition = edge_var(distinguished_a, w)
+                membership = edge_var(u, w)
+                others = [x for x in range(degree, N) if x != w]
+                clauses.extend(_conditional_conjunction_atmost(
+                    ((membership, edge_var(distinguished_a, x),
+                      edge_var(u, x), edge_var(w, x)) for x in others),
+                    3, condition, pool))
+                clauses.extend(_conditional_conjunction_atmost(
+                    ((membership, edge_var(distinguished_a, x),
+                      edge_var(u, x), -edge_var(w, x)) for x in others),
+                    5, condition, pool))
+    if b_internal_degree is not None:
+        distinguished_b = degree
+        start = distinguished_b + b_internal_degree + 1
+        for u in range(start, N):
+            for w in range(degree):
+                condition = -edge_var(distinguished_b, w)
+                membership = -edge_var(u, w)
+                others = [x for x in range(degree) if x != w]
+                clauses.extend(_conditional_conjunction_atmost(
+                    ((membership, -edge_var(distinguished_b, x),
+                      -edge_var(u, x), -edge_var(w, x)) for x in others),
+                    3, condition, pool))
+                clauses.extend(_conditional_conjunction_atmost(
+                    ((membership, -edge_var(distinguished_b, x),
+                      -edge_var(u, x), edge_var(w, x)) for x in others),
+                    5, condition, pool))
+    return clauses
+
+
 def residual_block_degree_clauses(degree, a_internal_degree,
                                   b_internal_degree, pool):
     """Encode Ramsey degree bounds inside the four fixed residual blocks."""
@@ -260,7 +310,8 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
                  enforce_cross_block_pair_common_bounds=True,
                  a_total_degree=None,
                  enforce_distinguished_cross_triple_bounds=True,
-                 enforce_residual_block_degree_bounds=True):
+                 enforce_residual_block_degree_bounds=True,
+                 enforce_distinguished_cross_pair_degree_bounds=True):
     require(degree in (18, 19, 20), "degree must be 18, 19, or 20")
     minimum, maximum = edge_bounds(degree)
     if edge_count is not None:
@@ -379,6 +430,11 @@ def core_clauses(degree, edge_count=None, a_internal_degree=None,
             and a_internal_degree is not None
             and b_internal_degree is not None):
         clauses.extend(residual_block_degree_clauses(
+            degree, a_internal_degree, b_internal_degree, pool))
+    if (enforce_distinguished_cross_pair_degree_bounds
+            and (a_internal_degree is not None
+                 or b_internal_degree is not None)):
+        clauses.extend(distinguished_cross_pair_degree_clauses(
             degree, a_internal_degree, b_internal_degree, pool))
 
     edges = list(EDGE_VAR.values())
@@ -535,6 +591,53 @@ def verify_distinguished_cross_triple_bounds(
     return maxima
 
 
+def verify_distinguished_cross_pair_degree_bounds(
+        adjacency, degree, a_internal_degree, b_internal_degree):
+    maxima = {"distinguished_a_cross_neighbors": 0,
+              "distinguished_a_cross_nonneighbors": 0,
+              "distinguished_b_cross_nonneighbors": 0,
+              "distinguished_b_cross_neighbors": 0}
+    if a_internal_degree is not None:
+        for u in range(1, a_internal_degree + 1):
+            common = [w for w in range(degree, N)
+                      if (adjacency[0] >> w) & 1
+                      and (adjacency[u] >> w) & 1]
+            for w in common:
+                neighbors = sum((adjacency[w] >> x) & 1
+                                for x in common if x != w)
+                nonneighbors = len(common) - 1 - neighbors
+                require(neighbors <= 3,
+                        "distinguished A cross-pair neighbor bound violated")
+                require(nonneighbors <= 5,
+                        "distinguished A cross-pair nonneighbor bound violated")
+                maxima["distinguished_a_cross_neighbors"] = max(
+                    maxima["distinguished_a_cross_neighbors"], neighbors)
+                maxima["distinguished_a_cross_nonneighbors"] = max(
+                    maxima["distinguished_a_cross_nonneighbors"],
+                    nonneighbors)
+    if b_internal_degree is not None:
+        distinguished_b = degree
+        start = distinguished_b + b_internal_degree + 1
+        for u in range(start, N):
+            common = [w for w in range(degree)
+                      if not ((adjacency[distinguished_b] >> w) & 1)
+                      and not ((adjacency[u] >> w) & 1)]
+            for w in common:
+                neighbors = sum((adjacency[w] >> x) & 1
+                                for x in common if x != w)
+                nonneighbors = len(common) - 1 - neighbors
+                require(nonneighbors <= 3,
+                        "distinguished B cross-pair nonneighbor bound violated")
+                require(neighbors <= 5,
+                        "distinguished B cross-pair neighbor bound violated")
+                maxima["distinguished_b_cross_nonneighbors"] = max(
+                    maxima["distinguished_b_cross_nonneighbors"],
+                    nonneighbors)
+                maxima["distinguished_b_cross_neighbors"] = max(
+                    maxima["distinguished_b_cross_neighbors"], neighbors)
+    return maxima
+
+
 def verify_residual_block_degree_bounds(
         adjacency, degree, a_internal_degree, b_internal_degree):
     distinguished_b = degree
@@ -616,7 +719,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
                  enforce_cross_block_pair_common_bounds=True,
                  a_total_degree=None,
                  enforce_distinguished_cross_triple_bounds=True,
-                 enforce_residual_block_degree_bounds=True):
+                 enforce_residual_block_degree_bounds=True,
+                 enforce_distinguished_cross_pair_degree_bounds=True):
     if a_total_degree is not None:
         require(a_internal_degree is not None,
                 "A-total degree requires A-internal degree")
@@ -681,6 +785,13 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
             and b_internal_degree is not None):
         residual_degrees = verify_residual_block_degree_bounds(
             adjacency, degree, a_internal_degree, b_internal_degree)
+    distinguished_cross_pair_degrees = None
+    if (enforce_distinguished_cross_pair_degree_bounds
+            and (a_internal_degree is not None
+                 or b_internal_degree is not None)):
+        distinguished_cross_pair_degrees = (
+            verify_distinguished_cross_pair_degree_bounds(
+                adjacency, degree, a_internal_degree, b_internal_degree))
 
     for vertices in combinations(range(degree), 4):
         require(not all((adjacency[u] >> v) & 1
@@ -709,6 +820,8 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
         result.update(distinguished_triples)
     if residual_degrees is not None:
         result.update(residual_degrees)
+    if distinguished_cross_pair_degrees is not None:
+        result.update(distinguished_cross_pair_degrees)
     return result
 
 
@@ -733,6 +846,12 @@ def solve(args):
     residual_block_degree_active = (
         not args.no_residual_block_degree_bounds
         and distinguished_refinements_applicable)
+    cross_pair_a_active = (
+        not args.no_distinguished_cross_pair_degree_bounds
+        and args.a_internal_degree is not None)
+    cross_pair_b_active = (
+        not args.no_distinguished_cross_pair_degree_bounds
+        and args.b_internal_degree is not None)
     clauses, top = core_clauses(
         degree=args.degree,
         edge_count=args.edges,
@@ -750,7 +869,9 @@ def solve(args):
         enforce_distinguished_cross_triple_bounds=(
             distinguished_cross_triple_active),
         enforce_residual_block_degree_bounds=(
-            residual_block_degree_active))
+            residual_block_degree_active),
+        enforce_distinguished_cross_pair_degree_bounds=(
+            cross_pair_a_active or cross_pair_b_active))
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -780,6 +901,11 @@ def solve(args):
           + configured_bound_state(
               args.no_residual_block_degree_bounds,
               distinguished_refinements_applicable))
+    print("distinguished_cross_pair_degree_bounds="
+          + configured_side_bound_state(
+              args.no_distinguished_cross_pair_degree_bounds,
+              args.a_internal_degree is not None,
+              args.b_internal_degree is not None))
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,
@@ -808,6 +934,10 @@ def solve(args):
                 distinguished_cross_triple_active),
             "residual_block_degree_bounds": (
                 residual_block_degree_active),
+            "distinguished_cross_pair_degree_bounds": (
+                cross_pair_a_active or cross_pair_b_active),
+            "distinguished_cross_pair_degree_a": cross_pair_a_active,
+            "distinguished_cross_pair_degree_b": cross_pair_b_active,
             "solver": args.solver,
             "result": result,
             "vars": top,
@@ -838,7 +968,9 @@ def solve(args):
                 enforce_distinguished_cross_triple_bounds=(
                     distinguished_cross_triple_active),
                 enforce_residual_block_degree_bounds=(
-                    residual_block_degree_active))
+                    residual_block_degree_active),
+                enforce_distinguished_cross_pair_degree_bounds=(
+                    cross_pair_a_active or cross_pair_b_active))
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
@@ -984,6 +1116,9 @@ def main():
     parser.add_argument(
         "--no-residual-block-degree-bounds", action="store_true",
         help="disable residual-block Ramsey degree bounds for diagnostics")
+    parser.add_argument(
+        "--no-distinguished-cross-pair-degree-bounds", action="store_true",
+        help="disable distinguished cross-pair degree bounds for diagnostics")
     parser.add_argument("--solver", default="cadical195")
     parser.add_argument("--cnf")
     parser.add_argument("--proof")

@@ -380,6 +380,31 @@ host, the fully distinguished `d20-j2-t19-k8` core changes from 1,628,851
 clauses / 765,208 variables to 1,726,627 / 817,464. These counts exclude the
 1,701,336 global five-set clauses and are not solver results.
 
+### Distinguished cross-pair degree cuts
+
+Let `a` be the distinguished A vertex and `u` one of its fixed A-neighbors.
+Their common neighbors `S` in B contain neither a triangle nor an independent
+4-set. For every `w` in `S`, its neighbors inside `S` are independent and
+therefore number at most three; its nonneighbors contain neither a triangle
+nor an independent triple, so `R(3,3)=6` bounds them by five. Dually, for the
+distinguished B vertex `b` and any fixed B-nonneighbor `u`, their common
+nonneighbors `T` in A are K4-free and I3-free. Each `w` in `T` has at most
+three nonneighbors and at most five neighbors inside `T`.
+
+The encoding excludes `w` itself, guards every counter by membership of `w`,
+and includes the remaining pair literal in every projected conjunction. The
+A and B sides activate independently when `j` and `k` are supplied;
+`--no-distinguished-cross-pair-degree-bounds` disables both for diagnostics.
+They add no partition axis, and all five manifest covers remain unchanged.
+The derivation depends on the global K5/I5 and A-K4/B-I4 clauses, so a
+core-only verdict remains invalid.
+
+The deterministic additions are 91,744 clauses / 48,304 variables for
+`d20-j2-k8` and 143,456 / 75,296 for `d20-j13-k13`. The first fully
+distinguished core changes from 1,726,627 / 817,464 to 1,818,371 / 865,768;
+these counts exclude the 1,701,336 global five-set clauses and are not solver
+results.
+
 ### Exact A-block edge partitions
 
 `--a-edges` fixes `E(A)` while leaving the total edge count unfixed. It is

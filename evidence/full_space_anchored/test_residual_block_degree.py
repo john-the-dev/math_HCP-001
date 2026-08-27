@@ -169,16 +169,21 @@ class ResidualBlockDegreeTests(unittest.TestCase):
         )
         for j, k, cross_off, residual_off, state, cross_active, residual_active in cases:
             for cross_pair_off in (False, True):
-                with self.subTest(j=j, k=k, cross_off=cross_off,
-                                  residual_off=residual_off,
-                                  cross_pair_off=cross_pair_off):
-                    self._check_solve_provenance_case(
-                        j, k, cross_off, residual_off, state, cross_active,
-                        residual_active, cross_pair_off, FakeSolver)
+                for cross_pair_degree_off in (False, True):
+                    with self.subTest(
+                            j=j, k=k, cross_off=cross_off,
+                            residual_off=residual_off,
+                            cross_pair_off=cross_pair_off,
+                            cross_pair_degree_off=cross_pair_degree_off):
+                        self._check_solve_provenance_case(
+                            j, k, cross_off, residual_off, state,
+                            cross_active, residual_active, cross_pair_off,
+                            cross_pair_degree_off, FakeSolver)
 
     def _check_solve_provenance_case(
             self, j, k, cross_off, residual_off, state, cross_active,
-            residual_active, cross_pair_off, fake_solver_class):
+            residual_active, cross_pair_off, cross_pair_degree_off,
+            fake_solver_class):
         core_calls = []
         verify_calls = []
 
@@ -200,6 +205,8 @@ class ResidualBlockDegreeTests(unittest.TestCase):
                 no_block_pair_common_bounds=False,
                 no_global_pair_common_bounds=False,
                 no_cross_block_pair_common_bounds=cross_pair_off,
+                no_distinguished_cross_pair_degree_bounds=(
+                    cross_pair_degree_off),
                 no_distinguished_cross_triple_bounds=cross_off,
                 no_residual_block_degree_bounds=residual_off,
                 solver="glucose4", cnf=None, proof=None,
@@ -227,6 +234,13 @@ class ResidualBlockDegreeTests(unittest.TestCase):
         cross_pair_state = "disabled" if cross_pair_off else "enabled"
         self.assertIn(f"cross_block_pair_common_bounds={cross_pair_state}",
                       output.getvalue())
+        a_pair_active = not cross_pair_degree_off and j is not None
+        b_pair_active = not cross_pair_degree_off and k is not None
+        pair_state = SAT.configured_side_bound_state(
+            cross_pair_degree_off, j is not None, k is not None)
+        self.assertIn(
+            f"distinguished_cross_pair_degree_bounds={pair_state}",
+            output.getvalue())
         for call in core_calls + verify_calls:
             self.assertEqual(
                 call["enforce_cross_block_pair_common_bounds"],
@@ -237,12 +251,21 @@ class ResidualBlockDegreeTests(unittest.TestCase):
             self.assertEqual(
                 call["enforce_residual_block_degree_bounds"],
                 residual_active)
+            self.assertEqual(
+                call["enforce_distinguished_cross_pair_degree_bounds"],
+                a_pair_active or b_pair_active)
         self.assertEqual(record["distinguished_cross_triple_bounds"],
                          cross_active)
         self.assertEqual(record["residual_block_degree_bounds"],
                          residual_active)
         self.assertEqual(record["cross_block_pair_common_bounds"],
                          not cross_pair_off)
+        self.assertEqual(record["distinguished_cross_pair_degree_bounds"],
+                         a_pair_active or b_pair_active)
+        self.assertEqual(record["distinguished_cross_pair_degree_a"],
+                         a_pair_active)
+        self.assertEqual(record["distinguished_cross_pair_degree_b"],
+                         b_pair_active)
 
 
 if __name__ == "__main__":

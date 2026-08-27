@@ -76,11 +76,13 @@ class BlockPairCommonBoundsTests(unittest.TestCase):
     def test_constraints_are_default_on_with_diagnostic_opt_out(self):
         bounded, bounded_top = SAT.core_clauses(
             20, None, 2, enforce_global_pair_common_bounds=False,
-            enforce_cross_block_pair_common_bounds=False)
+            enforce_cross_block_pair_common_bounds=False,
+            enforce_distinguished_cross_pair_degree_bounds=False)
         unbounded, unbounded_top = SAT.core_clauses(
             20, None, 2, enforce_block_pair_common_bounds=False,
             enforce_global_pair_common_bounds=False,
-            enforce_cross_block_pair_common_bounds=False)
+            enforce_cross_block_pair_common_bounds=False,
+            enforce_distinguished_cross_pair_degree_bounds=False)
         self.assertEqual((len(unbounded), unbounded_top), (732146, 361489))
         self.assertEqual((len(bounded), bounded_top), (879802, 440369))
 
