@@ -24,9 +24,10 @@ CaDiCaL 3.0.1 generated the DRAT proofs. Every proof was checked externally by
 `drat-trim` commit `2e3b2dc0ecf938addbd779d42877b6ed69d9a985`:
 
 ```sh
-python3 -m unittest -v test_exact_local_repair.py
+python3 "$(git rev-parse --show-toplevel)/evidence/z43_local_search/test_exact_local_repair.py"
 ./run_exact_local_repair.sh 8 /tmp/z43-local \
   "$(command -v cadical)" /path/to/drat-trim binary
+python3 verify_exact_local_evidence.py --artifact-prefix /tmp/z43-local
 ```
 
 The runner treats only CaDiCaL status 20 followed by `drat-trim`'s exact

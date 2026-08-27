@@ -3,10 +3,14 @@
 
 import hashlib
 import itertools
+import sys
 import unittest
 from pathlib import Path
 
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
 import exact_local_repair as repair
+import verify_exact_local_evidence as evidence
 
 
 def satisfies(clause, assignment):
@@ -55,6 +59,9 @@ class ExactLocalRepairTest(unittest.TestCase):
         )
         for path in logs.glob("*.log"):
             self.assertIn("\ns VERIFIED\n", path.read_text())
+
+    def test_documented_hash_table_matches_verifier(self):
+        evidence.verify()
 
 
 if __name__ == "__main__":
