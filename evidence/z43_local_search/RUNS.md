@@ -36,3 +36,24 @@ Direct enumeration reported 454 edges, 962,598 five-sets checked, zero K5s,
 two I5s, and `F=2`; the verifier exited 2 as expected for a non-solution.
 
 These are search metrics, not evidence that an `F=0` graph does not exist.
+
+## Two 30-minute runs
+
+Two longer runs used different tabu/noise/restart settings:
+
+```sh
+/usr/bin/time -l /tmp/z43_tabu --seed 101 --seconds 1800 --noise 12 \
+  --tenure 7 --restart-after 50000 --output /tmp/z43-seed101-1800.txt
+/usr/bin/time -l /tmp/z43_tabu --seed 211 --seconds 1800 --noise 35 \
+  --tenure 13 --restart-after 30000 --output /tmp/z43-seed211-1800.txt
+```
+
+Seed 101 completed 1,306,665 moves and 26 restarts; seed 211 completed
+1,224,936 moves and 40 restarts. Both ran for 1,800 seconds, used about 125 MB
+peak RSS, and found no state below `F=2`. The independent verifier checked all
+962,598 five-sets in each output and reported `K5=0`, `I5=2`, `F=2`.
+Both outputs equal the starting graph and have SHA-256
+`b13c0207149ff618acef13c822a4841ef21d60782dd40b94317887ad2d28beec`.
+
+These longer timeouts are still only negative search observations, not an
+exclusion theorem.
