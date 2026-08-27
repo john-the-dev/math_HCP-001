@@ -175,8 +175,14 @@ distance mode and interval, so its JSON bytes intentionally differ.
 
 Exact-mode artifacts use a distinct `z43-local-rN-exact` stem. A SAT output
 must be decoded with the matching `--expected-distance`, then checked with the
-independent graph verifier. A 900-second exact-distance-11 attempt and a
-separate 900-second exact-distance-12 attempt both returned UNKNOWN with
-status 0; neither partial trace was checked or used as evidence. The direct
-at-most radius-12 proof above, rather than either shell attempt, establishes
-the current fixed-label exclusion.
+independent graph verifier. Two continuation attempts had these outcomes:
+
+| exact distance | variables | clauses | CNF SHA-256 | real s | process s | max RSS MiB | result |
+|---:|---:|---:|---|---:|---:|---:|---|
+| 11 | 10,836 | 1,964,687 | `339f67c34c6ba93b9325924907545061c7bf40358f148d689df1fc1694218e8c` | 899.99 | 679.66 | 1,635.38 | UNKNOWN |
+| 12 | 11,739 | 1,968,253 | `3a868c8ec523d78f0550ddb17e6b22a1f1fd51a8c76ee67fa1f8b022a1b86c6b` | 899.98 | 655.00 | 1,530.92 | UNKNOWN |
+
+Both used CaDiCaL's 900-second cap and returned status 0. The runner mapped
+each to failure and did not invoke `drat-trim`; neither partial trace was
+checked or used as evidence. The direct at-most radius-12 proof above, rather
+than either shell attempt, establishes the current fixed-label exclusion.
