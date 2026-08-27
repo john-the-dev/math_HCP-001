@@ -5,6 +5,7 @@ from pathlib import Path
 import importlib.util
 import json
 import random
+from types import SimpleNamespace
 import unittest
 
 
@@ -89,6 +90,36 @@ class ATotalDegreeTests(unittest.TestCase):
             20, a_internal_degree=2, a_total_degree=19)
         self.assertGreater(len(exact), len(base))
         self.assertGreater(exact_top, base_top)
+
+    def test_production_equality_targets_exact_distinguished_incidence(self):
+        calls = []
+        original = SAT.CardEnc.equals
+
+        def record(literals, bound, vpool, encoding):
+            calls.append((tuple(literals), bound, vpool, encoding))
+            return SimpleNamespace(clauses=[])
+
+        SAT.CardEnc.equals = record
+        try:
+            SAT.core_clauses(
+                20, a_internal_degree=2, b_internal_degree=8,
+                a_total_degree=19)
+        finally:
+            SAT.CardEnc.equals = original
+        self.assertEqual(len(calls), 1)
+        literals, bound, _, encoding = calls[0]
+        self.assertEqual(literals,
+                         tuple(SAT.edge_var(0, vertex)
+                               for vertex in range(1, SAT.N)))
+        self.assertEqual(bound, 19)
+        self.assertEqual(encoding, SAT.EncType.seqcounter)
+
+    def test_model_verifier_rejects_invalid_total_degree_contract_first(self):
+        with self.assertRaisesRegex(ValueError, "requires A-internal"):
+            SAT.verify_model([0] * SAT.N, 20, a_total_degree=19)
+        with self.assertRaisesRegex(ValueError, "must be in 19..23"):
+            SAT.verify_model(
+                [0] * SAT.N, 20, a_internal_degree=2, a_total_degree=18)
 
 
 class ATotalDegreeManifestTests(unittest.TestCase):

@@ -447,6 +447,13 @@ def verify_model(adjacency, degree, edge_count=None, a_internal_degree=None,
                  b_internal_degree=None,
                  enforce_global_pair_common_bounds=True,
                  a_total_degree=None):
+    if a_total_degree is not None:
+        require(a_internal_degree is not None,
+                "A-total degree requires A-internal degree")
+        lower_t, upper_t = a_total_degree_bounds(
+            degree, a_internal_degree)
+        require(lower_t <= a_total_degree <= upper_t,
+                f"A-total degree must be in {lower_t}..{upper_t}")
     require(len(adjacency) == N, "model must contain 42 adjacency rows")
     for u in range(N):
         require(not (adjacency[u] >> u) & 1, "self edge")
