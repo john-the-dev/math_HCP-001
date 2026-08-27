@@ -15,7 +15,7 @@ For each `d`, the CNF searches all 861 edges of `H` and enforces:
 - the exact known edge ranges for the induced `R(4,5,n)` blocks;
 - Ramsey-derived internal-degree bounds for every vertex of each block;
 - Ramsey-derived common-set bounds for every pair inside each block;
-- Ramsey-derived common-set bounds for every cross-block pair;
+- Ramsey-derived whole-`H` common-set bounds for every pair;
 - `deg_H(a) in [d-1,23]` and `deg_H(b) in [d,24]`;
 - at most `451-d` edges;
 - nondecreasing full `H`-degrees independently inside `A` and `B`.
@@ -80,17 +80,18 @@ Each implication uses projected conjunction indicators and a guarded
 sequential counter. `--no-block-pair-common-bounds` disables only these
 redundant propagation cuts for diagnostics; it is not a production setting.
 
-The remaining A-B pairs admit the global Ramsey bound from the task plan.
-For an adjacent pair, its common neighbors contain no K3, since such a
+Every pair in `H` admits the global Ramsey bound from the task plan. For an
+adjacent pair, its common neighbors contain no K3, since such a
 triangle would complete a K5 with the pair, and contain no I5 by the global
 clauses. Thus `R(3,5)=14` bounds the set by 13. Dually, for a nonadjacent
 pair, its common nonneighbors contain no I3, since such a triple would
 complete an I5, and contain no K5 by the global clauses; `R(5,3)=14` again
-bounds the set by 13. Only cross-block pairs receive these cuts because the
-within-block bounds above are strictly stronger.
+bounds the set by 13. The within-block cuts above remain useful because their
+smaller bounds apply to the portions of these common sets inside A or B; they
+do not replace the whole-`H` bounds.
 
-The cross-block implications use projected conjunction indicators and a
-guarded k-cardinality totalizer. `--no-cross-pair-common-bounds` disables
+The global implications use projected conjunction indicators and a guarded
+k-cardinality totalizer. `--no-global-pair-common-bounds` disables
 them for diagnostic comparisons. These bounds require the global K5/I5
 clauses and cannot support a verdict when `core_clauses()` is used alone.
 
@@ -251,8 +252,8 @@ per-vertex block-degree, and pair common-set bounds all enabled:
 These measurements include the global 5-set clauses only in the total-clause
 column. They exclude solving and make no SAT or UNSAT claim.
 
-Adding the cross-block pair cuts to `d20-j2-k8` changed the core from 890,223
-clauses / 445,569 variables to 1,259,823 clauses / 604,849 variables on the
+Adding the whole-`H` pair cuts to `d20-j2-k8` changed the core from 890,223
+clauses / 445,569 variables to 1,613,463 clauses / 757,251 variables on the
 same integration host. The global 1,701,336 five-set clauses are not included
 in those core counts. This is a formula-construction comparison, not a solver
 benchmark or a SAT/UNSAT claim.
