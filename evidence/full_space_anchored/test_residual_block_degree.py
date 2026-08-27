@@ -6,6 +6,7 @@ import importlib.util
 import unittest
 
 from pysat.formula import IDPool
+from pysat.solvers import Solver
 
 
 HERE = Path(__file__).resolve().parent
@@ -86,6 +87,34 @@ class ResidualBlockDegreeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "b_minus"):
             SAT.verify_residual_block_degree_bounds(
                 adjacency, 20, 13, 8)
+
+    def test_actual_counter_projection_for_both_signed_polarities(self):
+        pool = IDPool(start_from=len(SAT.PAIRS) + 1)
+        positive_clauses = SAT.residual_block_degree_clauses(
+            20, 2, 8, pool)
+        positive_edges = [SAT.edge_var(u, v)
+                          for block in (range(3, 20), range(29, SAT.N))
+                          for u, v in SAT.combinations(block, 2)]
+        with Solver(name="glucose4", bootstrap_with=positive_clauses) as solver:
+            self.assertTrue(solver.solve(
+                assumptions=[-edge for edge in positive_edges]))
+            violation = {SAT.edge_var(3, v) for v in range(4, 13)}
+            self.assertFalse(solver.solve(assumptions=[
+                edge if edge in violation else -edge
+                for edge in positive_edges]))
+
+        pool = IDPool(start_from=len(SAT.PAIRS) + 1)
+        negative_clauses = SAT.residual_block_degree_clauses(
+            20, 13, 13, pool)
+        negative_edges = [SAT.edge_var(u, v)
+                          for block in (range(1, 14), range(21, 34))
+                          for u, v in SAT.combinations(block, 2)]
+        with Solver(name="glucose4", bootstrap_with=negative_clauses) as solver:
+            self.assertTrue(solver.solve(assumptions=negative_edges))
+            violation = {SAT.edge_var(1, v) for v in range(2, 11)}
+            self.assertFalse(solver.solve(assumptions=[
+                -edge if edge in violation else edge
+                for edge in negative_edges]))
 
     def test_default_activation_and_j_only_noop(self):
         bounded, bounded_top = SAT.core_clauses(

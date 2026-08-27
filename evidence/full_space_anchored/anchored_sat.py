@@ -29,6 +29,12 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def configured_bound_state(disabled, applicable):
+    if disabled:
+        return "disabled"
+    return "enabled" if applicable else "not-applicable"
+
+
 def edge_var(u, v):
     return EDGE_VAR[(u, v) if u < v else (v, u)]
 
@@ -668,6 +674,15 @@ def write_dimacs(path, clauses, top):
 
 
 def solve(args):
+    distinguished_refinements_applicable = (
+        args.a_internal_degree is not None
+        and args.b_internal_degree is not None)
+    distinguished_cross_triple_active = (
+        not args.no_distinguished_cross_triple_bounds
+        and distinguished_refinements_applicable)
+    residual_block_degree_active = (
+        not args.no_residual_block_degree_bounds
+        and distinguished_refinements_applicable)
     clauses, top = core_clauses(
         degree=args.degree,
         edge_count=args.edges,
@@ -681,9 +696,9 @@ def solve(args):
             not args.no_global_pair_common_bounds),
         a_total_degree=args.a_total_degree,
         enforce_distinguished_cross_triple_bounds=(
-            not args.no_distinguished_cross_triple_bounds),
+            distinguished_cross_triple_active),
         enforce_residual_block_degree_bounds=(
-            not args.no_residual_block_degree_bounds))
+            residual_block_degree_active))
     expected_clauses = len(clauses) + 2 * comb(N, 5)
     if args.cnf:
         written = write_dimacs(Path(args.cnf), clauses, top)
@@ -704,9 +719,13 @@ def solve(args):
     print("global_pair_common_bounds="
           f"{'disabled' if args.no_global_pair_common_bounds else 'enabled'}")
     print("distinguished_cross_triple_bounds="
-          f"{'disabled' if args.no_distinguished_cross_triple_bounds else 'enabled'}")
+          + configured_bound_state(
+              args.no_distinguished_cross_triple_bounds,
+              distinguished_refinements_applicable))
     print("residual_block_degree_bounds="
-          f"{'disabled' if args.no_residual_block_degree_bounds else 'enabled'}")
+          + configured_bound_state(
+              args.no_residual_block_degree_bounds,
+              distinguished_refinements_applicable))
     print(f"edge_vars={len(PAIRS)} vars_with_encoding={top}")
     print(f"core_clauses={len(clauses)} total_clauses={expected_clauses}", flush=True)
     with Solver(name=args.solver, bootstrap_with=clauses,
@@ -730,9 +749,9 @@ def solve(args):
             "block_pair_common_bounds": not args.no_block_pair_common_bounds,
             "global_pair_common_bounds": not args.no_global_pair_common_bounds,
             "distinguished_cross_triple_bounds": (
-                not args.no_distinguished_cross_triple_bounds),
+                distinguished_cross_triple_active),
             "residual_block_degree_bounds": (
-                not args.no_residual_block_degree_bounds),
+                residual_block_degree_active),
             "solver": args.solver,
             "result": result,
             "vars": top,
@@ -759,9 +778,9 @@ def solve(args):
                     not args.no_global_pair_common_bounds),
                 a_total_degree=args.a_total_degree,
                 enforce_distinguished_cross_triple_bounds=(
-                    not args.no_distinguished_cross_triple_bounds),
+                    distinguished_cross_triple_active),
                 enforce_residual_block_degree_bounds=(
-                    not args.no_residual_block_degree_bounds))
+                    residual_block_degree_active))
             record["adjacency_hex"] = [f"{row:011x}" for row in adjacency]
         elif args.proof:
             proof = solver.get_proof()
