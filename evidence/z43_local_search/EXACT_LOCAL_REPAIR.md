@@ -96,3 +96,15 @@ the substantive lines. Each transcript reports `s VERIFIED`.
 
 The exact conclusion is: no `(5,5)`-avoiding graph on labeled vertices
 `0..42` differs in at most ten edge positions from this exact seed.
+
+## Unresolved frontier
+
+A radius-11 continuation generated the deterministic 10,836-variable,
+1,945,833-clause CNF with SHA-256
+`f09d495e146114216ee8a5c4b8c9c2bdf87aeaeb56c1eefa8a0ba640a96573a0`.
+CaDiCaL reached its 900-second real-time cap after 2,556,191 conflicts and
+returned its no-verdict status 0. The partial proof was not checked and is not
+evidence of UNSAT. Radius 11 therefore remains unresolved.
+
+The runner maps this solver status to a nonzero wrapper exit and never invokes
+`drat-trim`, so automation cannot confuse the timeout with the verified path.

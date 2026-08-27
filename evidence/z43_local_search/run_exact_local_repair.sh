@@ -34,6 +34,9 @@ solver_status=$?
 set -e
 if [[ $solver_status -ne 20 ]]; then
   echo "CaDiCaL did not prove UNSAT (exit $solver_status)" >&2
+  if [[ $solver_status -eq 0 ]]; then
+    exit 1
+  fi
   exit "$solver_status"
 fi
 

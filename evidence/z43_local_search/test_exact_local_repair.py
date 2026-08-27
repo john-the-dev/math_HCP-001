@@ -3,7 +3,10 @@
 
 import hashlib
 import itertools
+import os
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -64,6 +67,30 @@ class ExactLocalRepairTest(unittest.TestCase):
 
     def test_documented_hash_table_matches_verifier(self):
         evidence.verify()
+
+    def test_runner_fails_closed_when_solver_times_out(self):
+        runner = HERE / "run_exact_local_repair.sh"
+        with tempfile.TemporaryDirectory() as raw_temp:
+            temp = Path(raw_temp)
+            fake_python = temp / "python3"
+            fake_solver = temp / "cadical"
+            checker_marker = temp / "checker-ran"
+            fake_checker = temp / "drat-trim"
+            fake_python.write_text("#!/bin/sh\nexit 0\n")
+            fake_solver.write_text("#!/bin/sh\nexit 0\n")
+            fake_checker.write_text(
+                f"#!/bin/sh\ntouch '{checker_marker}'\nexit 0\n")
+            for executable in (fake_python, fake_solver, fake_checker):
+                executable.chmod(0o755)
+            environment = os.environ.copy()
+            environment["PATH"] = f"{temp}:{environment['PATH']}"
+            completed = subprocess.run(
+                [runner, "11", temp / "output", fake_solver, fake_checker,
+                 "binary"],
+                text=True, capture_output=True, env=environment)
+            self.assertEqual(completed.returncode, 1)
+            self.assertIn("did not prove UNSAT (exit 0)", completed.stderr)
+            self.assertFalse(checker_marker.exists())
 
 
 if __name__ == "__main__":
