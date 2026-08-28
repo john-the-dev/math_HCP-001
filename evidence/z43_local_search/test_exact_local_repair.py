@@ -138,10 +138,11 @@ class ExactLocalRepairTest(unittest.TestCase):
         evidence.verify()
 
     def test_exact_shell_certificate_matches_verifier(self):
-        shell_evidence.verify()
+        shell_evidence.verify(13)
+        shell_evidence.verify(14)
         logs = HERE / "exact_verification_logs"
-        self.assertEqual([path.name for path in logs.glob("*.log")],
-                         ["r13.drat-trim.log"])
+        self.assertEqual(sorted(path.name for path in logs.glob("*.log")),
+                         ["r13.drat-trim.log", "r14.drat-trim.log"])
 
     def test_runner_fails_closed_when_solver_times_out(self):
         runner = HERE / "run_exact_local_repair.sh"

@@ -39,6 +39,8 @@ for radius in 11 12; do
 done
 ./run_exact_local_repair.sh 13 /tmp/z43-local \
   "$(command -v cadical)" /path/to/drat-trim binary 7200
+./run_exact_local_repair.sh 14 /tmp/z43-shell \
+  "$(command -v cadical)" /path/to/drat-trim binary 3600 exact
 python3 verify_exact_local_evidence.py
 python3 verify_exact_shell_evidence.py
 ```
@@ -69,6 +71,8 @@ The runner above independently verifies each newly generated proof. The
 optional `--artifact-prefix` mode is instead an authentication check for the
 retained original artifacts and is expected to reject non-byte-identical fresh
 proofs or checker logs, even when their proof checks succeed.
+It streams multi-gigabyte digests and requires the normalized committed
+transcript to occur exactly once in the authenticated raw checker stream.
 
 | radius | format | variables | clauses | solver s | CNF SHA-256 | proof SHA-256 |
 |---:|---|---:|---:|---:|---|---|
@@ -176,13 +180,15 @@ distance mode and interval, so its JSON bytes intentionally differ.
 
 Exact-mode artifacts use a distinct `z43-local-rN-exact` stem. A SAT output
 must be decoded with the matching `--expected-distance`, then checked with the
-independent graph verifier. Two continuation attempts had these outcomes:
+independent graph verifier. The exact-shell continuation attempts had these
+outcomes:
 
 | exact distance | variables | clauses | CNF SHA-256 | real s | process s | max RSS MiB | result |
 |---:|---:|---:|---|---:|---:|---:|---|
 | 11 | 10,836 | 1,964,687 | `339f67c34c6ba93b9325924907545061c7bf40358f148d689df1fc1694218e8c` | 899.99 | 679.66 | 1,635.38 | UNKNOWN |
 | 12 | 11,739 | 1,968,253 | `3a868c8ec523d78f0550ddb17e6b22a1f1fd51a8c76ee67fa1f8b022a1b86c6b` | 899.98 | 655.00 | 1,530.92 | UNKNOWN |
 | 13 | 12,642 | 1,971,815 | `fa1f2fc2c3bec954a2e1800356819d21347908497b4b0f1cf2688bb270c22a50` | 2,398.01 | 2,282.99 | 1,646.36 | UNSAT, VERIFIED |
+| 14 | 13,545 | 1,975,373 | `eaf05a7db3802d79ff1dc7960fddcdb7196555dbd478c7febde63624f9ce5ebc` | 2,991.05 | 2,988.91 | 1,391.76 | UNSAT, VERIFIED |
 
 The distance-11 and distance-12 attempts used CaDiCaL's 900-second cap and
 returned status 0. The runner mapped each to failure and did not invoke
@@ -200,3 +206,17 @@ the normalized committed transcript is under `exact_verification_logs/`.
 Together with the independently checked at-most radius-12 proof, this exact
 shell is a second certificate decomposition of the fixed-label radius-13
 conclusion. The direct at-most radius-13 proof remains independently sufficient.
+
+The distance-14 run returned UNSAT and wrote a 4,150,375,548-byte binary proof
+with SHA-256
+`51bf1e4767d080f6bf2bba261b95e8f3f6765d00c31a42113ef079032a211c3d`.
+The pinned checker exited 0 with exact `s VERIFIED` after 1,693.563 seconds;
+its backward check retained 6,125,115 of 16,726,405 lemmas and used
+1,701,307,126 resolution steps, zero RAT lemmas, and 15,046,479 redundant
+literals. The raw checker stream has SHA-256
+`c4374092211dd984be514427cda4120619aa7cc583989f28d9c1082e758ac584`;
+the normalized committed transcript is under `exact_verification_logs/`.
+Together with the independently checked direct at-most radius-13 proof, this
+exact shell is a second certificate decomposition of the fixed-label
+radius-14 conclusion. It does not exclude any graph outside that one labeled
+ball and is not a global `R(5,5)` result.
